@@ -1,0 +1,52 @@
+{
+    "label": "רונית שפירא · רואת חשבון",
+    "personal": {
+        "name": "רונית שפירא",
+        "title": "רואת חשבון (CPA) – ביקורת ומיסים",
+        "phone": "053-9871234",
+        "email": "ronit.shapira@mail.com",
+        "location": "רמת גן, ישראל",
+        "linkedin": "linkedin.com/in/ronit-shapira",
+        "website": "",
+        "github": "",
+        "about": "רואת חשבון מוסמכת עם 11 שנות ניסיון בביקורת דוחות כספיים, בייעוץ מס ובליווי חברות. מתמחה בדיווח לפי IFRS, בתכנוני מס ובבקרה פנימית. בעלת ראייה עסקית רחבה ודיוק מוקפד."
+    },
+    "experience": [
+        {
+            "company": "KPMG סומך חייקין",
+            "role": "מנהלת מחלקת ביקורת",
+            "period": "2019 - היום",
+            "description": "ניהול תיקי ביקורת של חברות ציבוריות ופרטיות\nהובלת צוות של 8 רואי חשבון מתמחים\nליווי תהליכי הנפקה ובדיקות נאותות (Due Diligence)"
+        },
+        {
+            "company": "BDO זיו האפט",
+            "role": "רואת חשבון בכירה",
+            "period": "2014 - 2019",
+            "description": "ביקורת דוחות כספיים בהתאם לתקני IFRS\nהכנת דוחות מס והתנהלות מול רשויות המס"
+        }
+    ],
+    "education": [
+        {
+            "institution": "האוניברסיטה העברית בירושלים",
+            "degree": "B.A. בחשבונאות וכלכלה",
+            "period": "2010 - 2013",
+            "description": "רישיון רו\"ח מטעם מועצת רואי החשבון."
+        }
+    ],
+    "military": [],
+    "volunteering": [],
+    "projects": [],
+    "certifications": [],
+    "skills": ["IFRS", "ביקורת דוחות", "ייעוץ מס", "SAP", "Excel מתקדם", "בקרה פנימית", "דיני חברות", "ניתוח פיננסי"],
+    "languages": [
+        { "name": "עברית", "level": "שפת אם" },
+        { "name": "אנגלית", "level": "שוטף" }
+    ],
+    "settings": {
+        "theme": "classic",
+        "color": "slate",
+        "watermark": true,
+        "sectionOrder": ["about", "experience", "education", "skills", "languages"],
+        "visibleSections": ["about", "experience", "education", "skills", "languages"]
+    }
+}

@@ -18,9 +18,7 @@
     <!-- PDF/image export dependencies -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- html2pdf.js kept as a compatibility fallback -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <!-- Fonts: Heebo (display), Assistant (body), Frank Ruhl Libre (serif) -->
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Heebo:wght@300;400;500;700;800;900&family=Frank+Ruhl+Libre:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -39,745 +37,18 @@
         }
     </script>
 
-    <script>
-        window.CV_ANALYTICS_CONFIG = {
-            enabled: false,
-            provider: 'endpoint',
-            endpoint: '',
-            gaMeasurementId: '',
-            siteId: 'korot-haim-beklik'
-        };
-
-        window.cvAnalytics = {
-            initialized: false,
-            init() {
-                const config = window.CV_ANALYTICS_CONFIG || {};
-                if (this.initialized || !config.enabled) return;
-                this.initialized = true;
-                if (config.provider !== 'ga4' || !config.gaMeasurementId) return;
-                window.dataLayer = window.dataLayer || [];
-                window.gtag = function(){ window.dataLayer.push(arguments); };
-                window.gtag('js', new Date());
-                window.gtag('config', config.gaMeasurementId, { anonymize_ip: true });
-                const script = document.createElement('script');
-                script.async = true;
-                script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(config.gaMeasurementId)}`;
-                document.head.appendChild(script);
-            },
-            track(eventName, details = {}) {
-                const config = window.CV_ANALYTICS_CONFIG || {};
-                if (!config.enabled) return;
-                this.init();
-                if (config.provider === 'ga4' && typeof window.gtag === 'function') {
-                    window.gtag('event', eventName, {
-                        site_id: config.siteId,
-                        language: document.documentElement.lang || 'he',
-                        ...details
-                    });
-                    return;
-                }
-                if (!config.endpoint) return;
-                const payload = {
-                    event: eventName,
-                    siteId: config.siteId,
-                    path: location.pathname,
-                    language: document.documentElement.lang || 'he',
-                    timestamp: new Date().toISOString(),
-                    details
-                };
-                const body = JSON.stringify(payload);
-                try {
-                    if (navigator.sendBeacon) {
-                        navigator.sendBeacon(config.endpoint, new Blob([body], { type: 'application/json' }));
-                        return;
-                    }
-                    fetch(config.endpoint, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body,
-                        keepalive: true
-                    }).catch(() => {});
-                } catch (error) {}
-            }
-        };
-
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('cvApp', () => ({
-                activeTab: 'edit',
-                demoMenuOpen: false,
-                fullPreview: false,
-                isDesktop: window.innerWidth >= 1024,
-                saveStatus: '',
-                exportStatus: '',
-                pageCount: 1,
-                exportMarginsMm: { top: 0, bottom: 0 },
-                storageKey: 'clicresume-hebrew-cv-draft-v2',
-                analyticsDraftStarted: false,
-                analyticsCvCreated: false,
-                autosaveTimer: null,
-                resizeHandler: null,
-
-                /* ---- Color themes (literals so Tailwind CDN picks them up) ---- */
-                colorMap: {
-                    indigo: { text: 'text-indigo-700', chipBg: 'bg-indigo-50', chipText: 'text-indigo-700', border: 'border-indigo-600', grad: 'from-indigo-800 via-indigo-900 to-slate-900', hex: '#4338ca' },
-                    teal:   { text: 'text-teal-700',   chipBg: 'bg-teal-50',   chipText: 'text-teal-700',   border: 'border-teal-600',   grad: 'from-teal-800 via-teal-900 to-slate-900',   hex: '#0f766e' },
-                    rose:   { text: 'text-rose-700',   chipBg: 'bg-rose-50',   chipText: 'text-rose-700',   border: 'border-rose-600',   grad: 'from-rose-900 via-rose-950 to-slate-900',   hex: '#be123c' },
-                    emerald:{ text: 'text-emerald-700',chipBg: 'bg-emerald-50',chipText: 'text-emerald-700',border: 'border-emerald-600',grad: 'from-emerald-800 via-emerald-900 to-slate-900',hex: '#047857' },
-                    amber:  { text: 'text-amber-700',  chipBg: 'bg-amber-50',  chipText: 'text-amber-800',  border: 'border-amber-600',  grad: 'from-amber-800 via-amber-900 to-stone-900',  hex: '#b45309' },
-                    slate:  { text: 'text-slate-800',  chipBg: 'bg-slate-100', chipText: 'text-slate-700',  border: 'border-slate-500',  grad: 'from-slate-700 via-slate-800 to-slate-950',  hex: '#334155' }
-                },
-
-                settings: {
-                    theme: 'modern',
-                    color: 'indigo',
-                    watermark: true
-                },
-
-                /* ---- Clean defaults: everything empty ---- */
-                personal: { name: '', title: '', phone: '', email: '', location: '', linkedin: '', website: '', github: '', about: '' },
-                experience: [],
-                education: [],
-                skills: [],
-                skillsInput: '',
-                languages: [],
-
-                /* ---- Helpers ---- */
-                initials() {
-                    const parts = (this.personal.name || '').trim().split(/\s+/).filter(Boolean);
-                    if (!parts.length) return '••';
-                    if (parts.length === 1) return parts[0].slice(0, 2);
-                    return (parts[0][0] || '') + (parts[1][0] || '');
-                },
-                hasBullets(t) {
-                    if (!t) return false;
-                    return t.split('\n').filter(l => l.trim()).length > 1 || /^\s*[•\-\*]/.test(t);
-                },
-                descLines(t) {
-                    if (!t) return [];
-                    return t.split('\n').map(l => l.replace(/^\s*[•\-\*]\s*/, '').trim()).filter(Boolean);
-                },
-                langPercent(level) {
-                    const l = (level || '').toLowerCase();
-                    if (/(שפת אם|native|mother)/.test(l)) return 100;
-                    if (/(שוטף|fluent|מקצוע|גבוה|advanced)/.test(l)) return 90;
-                    if (/(טוב|good|בינוני|intermediate)/.test(l)) return 70;
-                    if (/(בסיס|basic|מתחיל|beginner)/.test(l)) return 45;
-                    return 80;
-                },
-                get exportFileName() {
-                    const clean = (this.personal.name || 'קורות-חיים').replace(/[\\/:*?"<>|]+/g, '-').trim();
-                    return clean || 'קורות-חיים';
-                },
-                get longContentMessage() {
-                    if (this.pageCount <= 1) return '';
-                    return `התוכן צפוי להתפרס על ${this.pageCount} עמודי A4. הייצוא יתאים את הגובה אוטומטית.`;
-                },
-                get pageGuideStyle() {
-                    const pageHeight = 297;
-                    const top = this.exportMarginsMm.top;
-                    const bottomStart = pageHeight - this.exportMarginsMm.bottom;
-                    return `background-image: repeating-linear-gradient(to bottom, rgba(245,158,11,.08) 0, rgba(245,158,11,.08) ${top}mm, transparent ${top}mm, transparent ${bottomStart}mm, rgba(245,158,11,.08) ${bottomStart}mm, rgba(245,158,11,.08) calc(${pageHeight}mm - 2px), rgba(245,158,11,.75) calc(${pageHeight}mm - 2px), rgba(245,158,11,.75) ${pageHeight}mm);`;
-                },
-                snapshot() {
-                    return {
-                        settings: { ...this.settings },
-                        personal: { ...this.personal },
-                        experience: this.experience.map(e => ({ ...e })),
-                        education: this.education.map(e => ({ ...e })),
-                        skills: [ ...this.skills ],
-                        skillsInput: this.skillsInput,
-                        languages: this.languages.map(l => ({ ...l }))
-                    };
-                },
-                restoreSnapshot(data) {
-                    if (!data || typeof data !== 'object') return false;
-                    this.settings = {
-                        theme: data.settings?.theme || 'modern',
-                        color: data.settings?.color || 'indigo',
-                        watermark: data.settings?.watermark !== false
-                    };
-                    this.personal = { name: '', title: '', phone: '', email: '', location: '', linkedin: '', website: '', github: '', about: '', ...(data.personal || {}) };
-                    this.experience = Array.isArray(data.experience) ? data.experience.map(e => ({ company: '', role: '', period: '', description: '', ...e })) : [];
-                    this.education = Array.isArray(data.education) ? data.education.map(e => ({ institution: '', degree: '', period: '', description: '', ...e })) : [];
-                    this.skills = Array.isArray(data.skills) ? [ ...data.skills ] : [];
-                    this.skillsInput = typeof data.skillsInput === 'string' ? data.skillsInput : this.skills.join(', ');
-                    this.languages = Array.isArray(data.languages) ? data.languages.map(l => ({ name: '', level: '', ...l })) : [];
-                    this.$nextTick(() => this.updatePageInfo());
-                    return true;
-                },
-                saveDraft(manual = true) {
-                    try {
-                        localStorage.setItem(this.storageKey, JSON.stringify(this.snapshot()));
-                        if (manual) this.trackAnalytics('draft_saved');
-                        if (manual) this.flashSaveStatus('הטיוטה נשמרה בדפדפן הזה בלבד');
-                    } catch (error) {
-                        this.flashSaveStatus('לא ניתן היה לשמור את הטיוטה');
-                    }
-                },
-                loadDraft() {
-                    try {
-                        const raw = localStorage.getItem(this.storageKey);
-                        if (!raw) {
-                            this.flashSaveStatus('לא נמצאה טיוטה שמורה');
-                            return;
-                        }
-                        this.restoreSnapshot(JSON.parse(raw));
-                        this.flashSaveStatus('הטיוטה נטענה מהדפדפן המקומי');
-                    } catch (error) {
-                        this.flashSaveStatus('לא ניתן היה לטעון את הטיוטה');
-                    }
-                },
-                flashSaveStatus(message) {
-                    this.saveStatus = message;
-                    clearTimeout(this.saveStatusTimer);
-                    this.saveStatusTimer = setTimeout(() => { this.saveStatus = ''; }, 2800);
-                },
-                queueAutosave() {
-                    clearTimeout(this.autosaveTimer);
-                    this.autosaveTimer = setTimeout(() => this.saveDraft(false), 650);
-                },
-                trackAnalytics(eventName, details = {}) {
-                    window.cvAnalytics?.track(eventName, details);
-                },
-                hasCvContent() {
-                    return Boolean(
-                        this.personal.name ||
-                        this.personal.title ||
-                        this.personal.email ||
-                        this.personal.phone ||
-                        this.personal.about ||
-                        this.experience.length ||
-                        this.education.length ||
-                        this.skills.length ||
-                        this.languages.length
-                    );
-                },
-                trackDraftStarted() {
-                    if (this.analyticsDraftStarted || !this.hasCvContent()) return;
-                    this.analyticsDraftStarted = true;
-                    this.trackAnalytics('cv_started', { theme: this.settings.theme, color: this.settings.color });
-                },
-                trackCvCreated(format) {
-                    if (!this.analyticsCvCreated) {
-                        this.analyticsCvCreated = true;
-                        this.trackAnalytics('cv_created', { theme: this.settings.theme, color: this.settings.color });
-                    }
-                    this.trackAnalytics('cv_exported', { format, theme: this.settings.theme, color: this.settings.color });
-                },
-                async waitForFonts() {
-                    if (document.fonts?.ready) {
-                        try { await document.fonts.ready; } catch (error) {}
-                    }
-                },
-                prepareExportClone() {
-                    const source = document.querySelector('.cv-page');
-                    if (!source) return null;
-                    const clone = source.cloneNode(true);
-                    clone.classList.add('exporting-cv');
-                    clone.setAttribute('x-ignore', '');
-                    clone.setAttribute('dir', 'rtl');
-                    clone.style.width = '210mm';
-                    clone.style.minHeight = 'auto';
-                    clone.style.height = 'auto';
-                    clone.style.boxShadow = 'none';
-                    clone.style.transform = 'none';
-                    clone.style.position = 'relative';
-                    clone.style.left = '0';
-                    clone.style.top = '0';
-                    clone.querySelectorAll('.screen-only-footer, .a4-page-guide').forEach(el => el.remove());
-                    [clone, ...clone.querySelectorAll('*')].forEach(el => {
-                        el.style.boxShadow = 'none';
-                        el.style.transform = 'none';
-                        Array.from(el.attributes).forEach(attr => {
-                            if (attr.name !== 'x-ignore' && (attr.name.startsWith('x-') || attr.name.startsWith('@') || attr.name.startsWith(':'))) {
-                                el.removeAttribute(attr.name);
-                            }
-                        });
-                    });
-                    const root = clone.querySelector(':scope > div');
-                    if (root) {
-                        root.style.minHeight = 'auto';
-                        root.style.height = 'auto';
-                    }
-                    const holder = document.createElement('div');
-                    holder.className = 'pdf-workbench';
-                    holder.setAttribute('dir', 'ltr');
-                    holder.appendChild(clone);
-                    document.body.appendChild(holder);
-                    return { holder, clone, root };
-                },
-                async withExportClone(callback) {
-                    await this.waitForFonts();
-                    await new Promise(resolve => this.$nextTick(resolve));
-                    const prepared = this.prepareExportClone();
-                    if (!prepared) return;
-                    try {
-                        await callback(prepared);
-                    } finally {
-                        prepared.holder.remove();
-                    }
-                },
-                cssA4PageHeightPx() {
-                    const probe = document.createElement('div');
-                    probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;width:210mm;height:297mm;inset:0 auto auto 0;';
-                    document.body.appendChild(probe);
-                    const height = probe.getBoundingClientRect().height;
-                    probe.remove();
-                    return height;
-                },
-                onePageContentPxFor(widthPx, elementWidthPx = null) {
-                    const baseWidth = elementWidthPx || this.cssA4PageHeightPx() * 210 / 297;
-                    return Math.round(this.cssA4PageHeightPx() * (widthPx / baseWidth));
-                },
-                lockCloneToA4Pages(clone, root) {
-                    const onePagePx = this.cssA4PageHeightPx();
-                    const contentPx = Math.max(clone.scrollHeight, root?.scrollHeight || 0);
-                    const pages = Math.max(1, Math.ceil((contentPx - 6) / onePagePx));
-                    const targetPx = Math.ceil(pages * onePagePx);
-                    clone.style.height = `${targetPx}px`;
-                    clone.style.minHeight = `${targetPx}px`;
-                    if (root) {
-                        root.style.minHeight = `${targetPx}px`;
-                        root.style.height = 'auto';
-                    }
-                    return pages;
-                },
-                async renderExportCanvas(clone) {
-                    return html2canvas(clone, {
-                        scale: 2.25,
-                        useCORS: true,
-                        allowTaint: true,
-                        letterRendering: true,
-                        backgroundColor: '#ffffff',
-                        scrollX: 0,
-                        scrollY: 0,
-                        x: 0,
-                        y: 0,
-                        width: clone.offsetWidth,
-                        height: clone.offsetHeight,
-                        windowWidth: clone.offsetWidth,
-                        windowHeight: clone.offsetHeight
-                    });
-                },
-                rowInkScore(ctx, canvas, y, band = 6) {
-                    const startY = Math.max(0, Math.min(canvas.height - 1, Math.round(y - band / 2)));
-                    const height = Math.max(1, Math.min(band, canvas.height - startY));
-                    const data = ctx.getImageData(0, startY, canvas.width, height).data;
-                    let ink = 0;
-                    for (let i = 0; i < data.length; i += 4) {
-                        if (data[i + 3] > 10 && (data[i] < 245 || data[i + 1] < 245 || data[i + 2] < 245)) ink++;
-                    }
-                    return ink / (canvas.width * height);
-                },
-                findSmartCut(ctx, canvas, startY, desiredEndY) {
-                    const minSlice = Math.round(this.onePageContentPxFor(canvas.width) * 0.55);
-                    const minY = Math.min(canvas.height, startY + minSlice);
-                    const maxY = Math.min(canvas.height, desiredEndY + Math.round(canvas.width * 0.22));
-                    const searchStart = Math.max(minY, desiredEndY - Math.round(canvas.width * 0.18));
-                    let bestY = Math.min(canvas.height, desiredEndY);
-                    let bestScore = Infinity;
-
-                    for (let y = searchStart; y <= maxY; y += 8) {
-                        const score = this.rowInkScore(ctx, canvas, y, 10) + Math.abs(y - desiredEndY) / canvas.width * 0.03;
-                        if (score < bestScore) {
-                            bestScore = score;
-                            bestY = y;
-                        }
-                    }
-                    return Math.max(minY, Math.min(canvas.height, bestY));
-                },
-                canvasToPagedPdf(canvas) {
-                    const jsPDFCtor = window.jspdf?.jsPDF || window.jsPDF;
-                    if (!jsPDFCtor) throw new Error('jsPDF לא נטען בדפדפן');
-
-                    const pdf = new jsPDFCtor({
-                        orientation: 'portrait',
-                        unit: 'mm',
-                        format: 'a4',
-                        compress: true,
-                        putOnlyUsedFonts: true
-                    });
-
-                    const pageWidthMm = 210;
-                    const pageHeightMm = 297;
-                    const topMarginMm = this.exportMarginsMm.top;
-                    const bottomMarginMm = this.exportMarginsMm.bottom;
-                    const usableHeightMm = pageHeightMm - topMarginMm - bottomMarginMm;
-                    const canvasScale = canvas.width / document.querySelector('.exporting-cv')?.offsetWidth || 1;
-                    const usableHeightPx = Math.round(this.cssA4PageHeightPx() * canvasScale);
-                    const sourceCtx = canvas.getContext('2d', { willReadFrequently: true });
-                    const plannedPages = Math.max(1, Math.ceil((canvas.height - 18) / usableHeightPx));
-                    const slices = [];
-                    let sourceY = 0;
-
-                    while (sourceY < canvas.height - 2 && slices.length < plannedPages) {
-                        const isLastPage = slices.length === plannedPages - 1;
-                        const desiredEndY = Math.min(canvas.height, sourceY + usableHeightPx);
-                        const remainingPagesAfterCut = plannedPages - slices.length - 1;
-                        const minRequiredCut = canvas.height - (remainingPagesAfterCut * usableHeightPx);
-                        let cutY = isLastPage ? canvas.height : this.findSmartCut(sourceCtx, canvas, sourceY, desiredEndY);
-                        cutY = isLastPage ? canvas.height : Math.max(cutY, minRequiredCut);
-                        cutY = Math.min(cutY, canvas.height);
-                        const sliceHeight = Math.max(1, cutY - sourceY);
-                        slices.push({ sourceY, sliceHeight });
-                        sourceY = cutY;
-                    }
-
-                    slices.forEach((slice, page) => {
-                        if (page > 0) pdf.addPage('a4', 'portrait');
-                        const pageCanvas = document.createElement('canvas');
-                        pageCanvas.width = canvas.width;
-                        pageCanvas.height = slice.sliceHeight;
-                        const ctx = pageCanvas.getContext('2d');
-                        ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-                        ctx.drawImage(canvas, 0, slice.sourceY, canvas.width, slice.sliceHeight, 0, 0, canvas.width, slice.sliceHeight);
-                        const imgData = pageCanvas.toDataURL('image/jpeg', 0.99);
-                        const sliceHeightMm = Math.min(usableHeightMm, slice.sliceHeight / usableHeightPx * usableHeightMm);
-                        pdf.addImage(imgData, 'JPEG', 0, topMarginMm, pageWidthMm, sliceHeightMm, undefined, 'FAST');
-                    });
-
-                    pdf.save(`${this.exportFileName}.pdf`);
-                    return slices.length;
-                },
-                updatePageInfo() {
-                    this.$nextTick(() => {
-                        const page = document.querySelector('.cv-page');
-                        if (!page) return;
-                        const root = page.querySelector(':scope > div');
-                        const onePagePx = this.cssA4PageHeightPx();
-                        const contentPx = Math.max(page.scrollHeight, root?.scrollHeight || 0);
-                        this.pageCount = Math.max(1, Math.ceil((contentPx - 6) / onePagePx));
-                    });
-                },
-
-                /* ---- Actions ---- */
-                addExperience() { this.experience.push({ company: '', role: '', period: '', description: '' }); },
-                removeExperience(i) { this.experience.splice(i, 1); },
-                addEducation() { this.education.push({ institution: '', degree: '', period: '', description: '' }); },
-                removeEducation(i) { this.education.splice(i, 1); },
-                addLanguage() { this.languages.push({ name: '', level: '' }); },
-                removeLanguage(i) { this.languages.splice(i, 1); },
-                updateSkills() { this.skills = this.skillsInput.split(',').map(s => s.trim()).filter(Boolean); },
-
-                async printCV() {
-                    this.activeTab = 'preview';
-                    this.exportStatus = 'מכין PDF איכותי...';
-                    try {
-                        await this.withExportClone(async ({ clone, root }) => {
-                            const pages = this.lockCloneToA4Pages(clone, root);
-                            this.pageCount = pages;
-                            const canvas = await this.renderExportCanvas(clone);
-                            this.pageCount = this.canvasToPagedPdf(canvas);
-                            this.trackCvCreated('pdf');
-                        });
-                    } catch (error) {
-                        console.error(error);
-                        alert('הייצוא נכשל. נסו להפחית מעט תוכן או לבחור תבנית קומפקטית יותר.');
-                    } finally {
-                        this.exportStatus = '';
-                    }
-                },
-                async exportImage(type = 'png') {
-                    this.exportStatus = `מכין ${type.toUpperCase()}...`;
-                    try {
-                        await this.withExportClone(async ({ clone, root }) => {
-                            this.lockCloneToA4Pages(clone, root);
-                            const canvas = await this.renderExportCanvas(clone);
-                            const link = document.createElement('a');
-                            const mime = type === 'jpeg' ? 'image/jpeg' : 'image/png';
-                            link.download = `${this.exportFileName}.${type}`;
-                            link.href = canvas.toDataURL(mime, 0.98);
-                            link.click();
-                            this.trackCvCreated(type);
-                        });
-                    } catch (error) {
-                        console.error(error);
-                        alert('ייצוא התמונה נכשל. נסו שוב או בחרו PDF.');
-                    } finally {
-                        this.exportStatus = '';
-                    }
-                },
-
-                /* ---- Demo profiles (all Hebrew / RTL) ---- */
-                demos: {
-                    data: {
-                        label: 'מיכל לוי · מדענית נתונים',
-                        personal: {
-                            name: 'מיכל לוי', title: 'מדענית נתונים וראשת צוות AI',
-                            phone: '052-9876543', email: 'michal.levy@mail.com', location: 'חיפה, ישראל',
-                            linkedin: 'linkedin.com/in/michal-levy', website: 'michal-levy.dev', github: 'github.com/michal-levy',
-                            about: 'מדענית נתונים ומפתחת אלגוריתמים בעלת 8 שנות ניסיון באקדמיה ובתעשייה. מומחית בפתרונות NLP מתקדמים, עיבוד תמונה והובלת פרויקטי AI משלב המחקר ועד פרודקשן.'
-                        },
-                        experience: [
-                            { company: 'אלגוריתמיקס מערכות בע"מ', role: 'ראשת צוות מחקר AI', period: '2021 - היום',
-                              description: 'הובלת צוות של 5 חוקרים ומדעני נתונים לפיתוח מודלי שפה מותאמים אישית\nשיפור דיוק המערכת ב-18% באמצעות ארכיטקטורת רשת ייחודית\nהטמעת מודלים בקנה מידה רחב ב-Docker ו-Kubernetes' },
-                            { company: 'רפאל - מערכות מתקדמות', role: 'מהנדסת Machine Learning', period: '2018 - 2021',
-                              description: 'מחקר ופיתוח אלגוריתמים לעיבוד אותות ותמונה\nכתיבת קוד מותאם ביצועים ב-Python ו-C++' }
-                        ],
-                        education: [
-                            { institution: 'אוניברסיטת בן-גוריון בנגב', degree: 'Ph.D. בהנדסת תעשייה וניהול', period: '2014 - 2018',
-                              description: 'התמחות בבינה מלאכותית. פרסום 3 מאמרים בכנסים מובילים.' }
-                        ],
-                        skills: ['Python', 'PyTorch', 'TensorFlow', 'NLP', 'Computer Vision', 'Docker', 'SQL', 'Kubernetes'],
-                        languages: [ { name: 'עברית', level: 'שפת אם' }, { name: 'אנגלית', level: 'שוטף' }, { name: 'צרפתית', level: 'טוב' } ]
-                    },
-
-                    marketing: {
-                        label: 'דניאל כהן · מנהל שיווק דיגיטלי',
-                        personal: {
-                            name: 'דניאל כהן', title: 'מנהל שיווק דיגיטלי ומיתוג',
-                            phone: '054-3217890', email: 'daniel.cohen@mail.com', location: 'תל אביב, ישראל',
-                            linkedin: 'linkedin.com/in/daniel-cohen', website: 'daniel-marketing.co.il', github: '',
-                            about: 'מנהל שיווק דיגיטלי עם 7 שנות ניסיון בבניית אסטרטגיות צמיחה, ניהול קמפיינים רב-ערוציים והובלת צוותי קריאייטיב. מתמחה בשיווק ביצועים, אופטימיזציה של משפכי המרה והגדלת ROI.'
-                        },
-                        experience: [
-                            { company: 'נקסט מדיה דיגיטל', role: 'מנהל שיווק בכיר', period: '2022 - היום',
-                              description: 'ניהול תקציב מדיה שנתי של 8 מיליון ש"ח\nהגדלת לידים אורגניים ב-65% בתוך שנה\nהובלת צוות של 6 אנשי שיווק ותוכן' },
-                            { company: 'בית תוכנה ECOM', role: 'מנהל קמפיינים', period: '2019 - 2022',
-                              description: 'ניהול קמפיינים בגוגל ובמטא בהיקף של מיליוני חשיפות\nשיפור שיעור ההמרה הממוצע ב-40%' }
-                        ],
-                        education: [
-                            { institution: 'אוניברסיטת תל אביב', degree: 'B.A. במנהל עסקים ושיווק', period: '2015 - 2018',
-                              description: 'התמחות בשיווק דיגיטלי והתנהגות צרכנים.' }
-                        ],
-                        skills: ['Google Ads', 'Meta Ads', 'SEO', 'Google Analytics', 'HubSpot', 'אסטרטגיה שיווקית', 'ניהול תקציב', 'קופירייטינג'],
-                        languages: [ { name: 'עברית', level: 'שפת אם' }, { name: 'אנגלית', level: 'שוטף' } ]
-                    },
-
-                    nurse: {
-                        label: 'נועה אברהם · אחות מוסמכת',
-                        personal: {
-                            name: 'נועה אברהם', title: 'אחות מוסמכת – טיפול נמרץ',
-                            phone: '052-6549870', email: 'noa.avraham@mail.com', location: 'ירושלים, ישראל',
-                            linkedin: '', website: '', github: '',
-                            about: 'אחות מוסמכת עם 9 שנות ניסיון במחלקות טיפול נמרץ ומיון. מנוסה בטיפול בחולים קריטיים, בתפעול ציוד רפואי מתקדם ובהדרכת צוותים. בעלת יחס אנושי חם ויכולת תפקוד גבוהה תחת לחץ.'
-                        },
-                        experience: [
-                            { company: 'המרכז הרפואי הדסה עין כרם', role: 'אחות אחראית משמרת – טיפול נמרץ', period: '2020 - היום',
-                              description: 'ניהול וניטור מטופלים במצב קריטי ביחידת טיפול נמרץ\nהדרכה וחניכה של אחיות חדשות בצוות\nהובלת תהליכי שיפור איכות ובטיחות הטיפול' },
-                            { company: 'בית חולים שערי צדק', role: 'אחות מיון', period: '2016 - 2020',
-                              description: 'טיפול וקבלת חולים במלר"ד בעומסים גבוהים\nתיעוד רפואי מדויק ומעקב אחר פרוטוקולים' }
-                        ],
-                        education: [
-                            { institution: 'אוניברסיטת בן-גוריון בנגב', degree: 'B.A. בסיעוד (R.N.)', period: '2012 - 2016',
-                              description: 'בוגרת מצטיינת. קורס על-בסיסי בטיפול נמרץ.' }
-                        ],
-                        skills: ['טיפול נמרץ', 'החייאה (ACLS)', 'ניהול תרופתי', 'ציוד הנשמה', 'תיעוד רפואי', 'עבודת צוות', 'ניהול משמרת'],
-                        languages: [ { name: 'עברית', level: 'שפת אם' }, { name: 'אנגלית', level: 'טוב' }, { name: 'ערבית', level: 'בסיסי' } ]
-                    },
-
-                    cpa: {
-                        label: 'רונית שפירא · רואת חשבון',
-                        personal: {
-                            name: 'רונית שפירא', title: 'רואת חשבון (CPA) – ביקורת ומיסים',
-                            phone: '053-9871234', email: 'ronit.shapira@mail.com', location: 'רמת גן, ישראל',
-                            linkedin: 'linkedin.com/in/ronit-shapira', website: '', github: '',
-                            about: 'רואת חשבון מוסמכת עם 11 שנות ניסיון בביקורת דוחות כספיים, בייעוץ מס ובליווי חברות. מתמחה בדיווח לפי IFRS, בתכנוני מס ובבקרה פנימית. בעלת ראייה עסקית רחבה ודיוק מוקפד.'
-                        },
-                        experience: [
-                            { company: 'KPMG סומך חייקין', role: 'מנהלת מחלקת ביקורת', period: '2019 - היום',
-                              description: 'ניהול תיקי ביקורת של חברות ציבוריות ופרטיות\nהובלת צוות של 8 רואי חשבון מתמחים\nליווי תהליכי הנפקה ובדיקות נאותות (Due Diligence)' },
-                            { company: 'BDO זיו האפט', role: 'רואת חשבון בכירה', period: '2014 - 2019',
-                              description: 'ביקורת דוחות כספיים בהתאם לתקני IFRS\nהכנת דוחות מס והתנהלות מול רשויות המס' }
-                        ],
-                        education: [
-                            { institution: 'האוניברסיטה העברית בירושלים', degree: 'B.A. בחשבונאות וכלכלה', period: '2010 - 2013',
-                              description: 'רישיון רו"ח מטעם מועצת רואי החשבון.' }
-                        ],
-                        skills: ['IFRS', 'ביקורת דוחות', 'ייעוץ מס', 'SAP', 'Excel מתקדם', 'בקרה פנימית', 'דיני חברות', 'ניתוח פיננסי'],
-                        languages: [ { name: 'עברית', level: 'שפת אם' }, { name: 'אנגלית', level: 'שוטף' } ]
-                    }
-                },
-
-                loadDemo(key) {
-                    const d = this.demos[key] || this.demos.data;
-                    this.personal = { ...d.personal };
-                    this.experience = d.experience.map(e => ({ ...e }));
-                    this.education = d.education.map(e => ({ ...e }));
-                    this.skills = [ ...d.skills ];
-                    this.skillsInput = d.skills.join(', ');
-                    this.languages = d.languages.map(l => ({ ...l }));
-                    this.demoMenuOpen = false;
-                    this.trackAnalytics('demo_loaded', { demo: key });
-                    this.$nextTick(() => this.updatePageInfo());
-                },
-
-                loadDemoData() { this.loadDemo('data'); },
-
-                clearData() {
-                    this.personal = { name: '', title: '', phone: '', email: '', location: '', linkedin: '', website: '', github: '', about: '' };
-                    this.experience = [];
-                    this.education = [];
-                    this.skills = [];
-                    this.skillsInput = '';
-                    this.languages = [];
-                    this.analyticsDraftStarted = false;
-                    this.analyticsCvCreated = false;
-                    this.trackAnalytics('draft_cleared');
-                    this.$nextTick(() => this.updatePageInfo());
-                },
-                init() {
-                    this.trackAnalytics('page_view');
-                    const saved = localStorage.getItem(this.storageKey);
-                    if (saved) {
-                        try {
-                            this.restoreSnapshot(JSON.parse(saved));
-                            this.saveStatus = 'נטענה טיוטה מקומית אחרונה';
-                            setTimeout(() => { this.saveStatus = ''; }, 2400);
-                        } catch (error) {}
-                    }
-                    this.resizeHandler = () => {
-                        this.isDesktop = window.innerWidth >= 1024;
-                        this.updatePageInfo();
-                    };
-                    window.addEventListener('resize', this.resizeHandler);
-                    this.$watch(
-                        () => JSON.stringify({
-                            settings: this.settings,
-                            personal: this.personal,
-                            experience: this.experience,
-                            education: this.education,
-                            skillsInput: this.skillsInput,
-                            languages: this.languages
-                        }),
-                        () => {
-                            this.queueAutosave();
-                            this.trackDraftStarted();
-                            this.updatePageInfo();
-                        }
-                    );
-                    this.$nextTick(() => this.updatePageInfo());
-                }
-            }));
-        });
-    </script>
+    <!-- App styles -->
+    <link rel="stylesheet" href="src/styles/app.css">
+    <link rel="stylesheet" href="src/styles/cv.css">
 
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-    <style>
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        .cv-page {
-            width: 210mm;
-            min-height: 297mm;
-            direction: rtl;
-            text-align: right;
-            box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.25);
-            overflow: visible;
-        }
-        .cv-page,
-        .cv-page * {
-            box-sizing: border-box;
-        }
-        .cv-page-shell {
-            min-height: 297mm;
-            position: relative;
-            background: #fff;
-        }
-        .preview-scale-container {
-            transform: scale(0.72);
-            transform-origin: top center;
-            min-height: calc(297mm * 0.72 + 2rem);
-        }
-        .full-preview .preview-scale-container {
-            transform: scale(0.96);
-            min-height: calc(297mm * 0.96 + 2rem);
-        }
-        .pdf-workbench {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 210mm;
-            min-height: 297mm;
-            z-index: 2147483647;
-            opacity: 0.01;
-            pointer-events: none;
-            background: #fff;
-            overflow: visible;
-            direction: ltr;
-            transform: none !important;
-        }
-        .exporting-cv {
-            box-shadow: none !important;
-            transform: none !important;
-            margin: 0 !important;
-            overflow: visible !important;
-            direction: rtl !important;
-        }
-        .exporting-cv * {
-            text-shadow: none !important;
-            -webkit-font-smoothing: antialiased;
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
-        }
-        .a4-page-guide {
-            position: absolute;
-            inset: 0;
-            z-index: 30;
-            pointer-events: none;
-            mix-blend-mode: multiply;
-        }
-        .a4-page-guide::after {
-            content: "A4 export preview";
-            position: absolute;
-            top: 3mm;
-            left: 4mm;
-            direction: ltr;
-            font: 600 9px/1 Assistant, sans-serif;
-            color: rgba(180, 83, 9, .85);
-            background: rgba(255, 251, 235, .9);
-            border: 1px solid rgba(245, 158, 11, .45);
-            border-radius: 3px;
-            padding: 2px 5px;
-        }
-        .avoid-break {
-            break-inside: avoid;
-            page-break-inside: avoid;
-        }
-        .brand-watermark {
-            position: absolute;
-            left: 10mm;
-            bottom: 8mm;
-            z-index: 20;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            direction: rtl;
-            color: rgba(71, 85, 105, .42);
-            font: 700 8.5px/1 Assistant, sans-serif;
-            letter-spacing: 0;
-        }
-        .brand-watermark__mark {
-            width: 13px;
-            height: 13px;
-            opacity: .55;
-            border-radius: 3px;
-        }
-        /* LTR-only fields (phone / email / urls) so digits & punctuation read correctly */
-        .ltr { direction: ltr; unicode-bidi: embed; }
-
-        @media (min-width: 1536px) { .preview-scale-container { transform: scale(0.82); min-height: calc(297mm * 0.82 + 2rem); } }
-        @media (max-width: 1280px) { .preview-scale-container { transform: scale(0.62); min-height: calc(297mm * 0.62 + 2rem); } }
-        @media (max-width: 768px)  { .preview-scale-container { transform: scale(0.55); min-height: calc(297mm * 0.55 + 2rem); } }
-        @media (max-width: 480px)  { .preview-scale-container { transform: scale(0.42); min-height: calc(297mm * 0.42 + 2rem); } }
-
-        @media print {
-            body { background: #fff !important; }
-            .no-print { display: none !important; }
-            .preview-scale-container { transform: none !important; width: 100% !important; }
-            .cv-page { width: 100% !important; min-height: 0 !important; box-shadow: none !important; }
-            @page { size: A4; margin: 0; }
-        }
-    </style>
+    <!-- App module -->
+    <script type="module" src="src/app.js"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen antialiased flex flex-col" x-data="cvApp()" :class="{ 'full-preview': fullPreview }">
 
-    <!-- Header -->
+    <!-- ==================== HEADER ==================== -->
     <header class="bg-slate-900 text-white px-6 py-4 flex flex-wrap items-center justify-between shadow-md no-print z-10">
         <div class="flex items-center gap-3">
             <img src="assets/logo-mark.svg" alt="" class="w-10 h-10 rounded-xl shadow-sm">
@@ -787,34 +58,36 @@
             </div>
             <span class="hidden md:inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-200">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-300"></span>
-                שמירה מקומית · מדידה אנונימית מוכנה
+                שמירה מקומית
             </span>
         </div>
-
         <div class="flex flex-wrap items-center gap-2 mt-4 sm:mt-0">
-            <button @click="saveDraft()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition">
-                שמירת טיוטה
-            </button>
-            <button @click="loadDraft()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition">
-                טעינת טיוטה
-            </button>
+            <button @click="doSaveDraft()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition">שמירת טיוטה</button>
+            <button @click="doLoadDraft()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition">טעינת טיוטה</button>
             <button @click="fullPreview = !fullPreview; activeTab = 'preview'; $nextTick(() => updatePageInfo())"
                     class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 px-4 rounded-lg shadow transition text-sm"
                     x-text="fullPreview ? 'חזרה לעריכה' : 'תצוגה מלאה'"></button>
-            <button @click="printCV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition flex items-center gap-2 text-sm">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <button @click="doPrintCV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition flex items-center gap-2 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 הורדה כ-PDF
             </button>
-            <button @click="exportImage('png')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition">PNG</button>
-            <button @click="exportImage('jpeg')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition">JPEG</button>
+            <button @click="doPrintTextPdf()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition" title="PDF עם טקסט ניתן לבחירה (ATS-friendly)">הדפסה</button>
+            <button @click="doExportImage('png')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition">PNG</button>
+            <button @click="doExportImage('jpeg')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition">JPEG</button>
+
+            <!-- JSON I/O -->
+            <button @click="doExportJson()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition" title="ייצוא JSON">JSON ⬇</button>
+            <button @click="doImportJson()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition" title="ייבוא JSON">JSON ⬆</button>
+
+            <!-- Demo menu -->
             <div class="relative" @click.outside="demoMenuOpen = false">
                 <button @click="demoMenuOpen = !demoMenuOpen" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-2 px-4 rounded-lg text-sm border border-slate-700 transition flex items-center gap-1.5">
                     דוגמאות
-                    <svg class="w-3.5 h-3.5 transition-transform" :class="demoMenuOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    <svg class="w-3.5 h-3.5 transition-transform" :class="demoMenuOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
                 <div x-show="demoMenuOpen" x-transition.opacity.duration.150ms class="absolute left-0 mt-2 w-60 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 z-30 text-right" style="display:none">
                     <template x-for="(demo, key) in demos" :key="key">
-                        <button @click="loadDemo(key)" class="block w-full text-right px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition" x-text="demo.label"></button>
+                        <button @click="loadDemo(key)" class="block w-full text-right px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition" x-text="demo.label || key"></button>
                     </template>
                 </div>
             </div>
@@ -822,12 +95,14 @@
         </div>
     </header>
 
+    <!-- Status bar -->
     <div class="no-print bg-white border-b border-slate-200 px-4 py-2 text-center text-xs text-slate-500" x-show="saveStatus || exportStatus || longContentMessage" x-transition.opacity>
         <span x-show="saveStatus" x-text="saveStatus"></span>
         <span x-show="exportStatus" x-text="exportStatus"></span>
         <span x-show="!saveStatus && !exportStatus && longContentMessage" class="text-amber-700 font-semibold" x-text="longContentMessage"></span>
     </div>
 
+    <!-- ==================== MAIN ==================== -->
     <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
 
         <!-- Mobile tabs -->
@@ -836,15 +111,30 @@
             <button @click="activeTab = 'preview'" :class="activeTab === 'preview' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'" class="w-1/2 py-3 text-center font-semibold border-b-2 text-sm transition">תצוגה מקדימה</button>
         </div>
 
-        <!-- EDITOR -->
+        <!-- ========== EDITOR PANEL ========== -->
         <section x-show="!fullPreview && (activeTab === 'edit' || isDesktop)" class="w-full lg:w-[42%] bg-slate-50 border-l border-slate-200 flex flex-col no-print">
             <div class="p-6 overflow-y-auto custom-scrollbar flex-1 lg:max-h-[calc(100vh-72px)]">
 
+                <!-- Intro -->
                 <div class="bg-white border-r-4 border-indigo-500 p-4 rounded-l-md mb-6 shadow-sm">
-                    <p class="text-xs text-slate-600 leading-relaxed">מלאו את הפרטים והם יתעדכנו מיד בתצוגה המקדימה. הטיוטה נשמרת בדפדפן המקומי בלבד. המדידה האנונימית, אם תופעל, תספור שימושים בלבד ולא תשלח תוכן קורות חיים.</p>
+                    <p class="text-xs text-slate-600 leading-relaxed">מלאו את הפרטים והם יתעדכנו מיד בתצוגה המקדימה. הטיוטה נשמרת בדפדפן המקומי בלבד.</p>
                 </div>
 
-                <!-- Design -->
+                <!-- Tip bubble -->
+                <div x-show="showTips" x-transition class="tip-bubble bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 relative">
+                    <button @click="hideTip()" class="absolute top-2 left-2 text-amber-400 hover:text-amber-600 text-sm leading-none">&times;</button>
+                    <p class="text-[11px] font-bold text-amber-800 mb-1" x-text="currentTipSection"></p>
+                    <p class="text-xs text-amber-700" x-text="currentTip"></p>
+                </div>
+
+                <!-- Validation issues -->
+                <div x-show="validationIssues.length > 0" class="mb-4 space-y-1">
+                    <template x-for="(issue, i) in validationIssues" :key="i">
+                        <div class="validation-pill" x-text="issue.message"></div>
+                    </template>
+                </div>
+
+                <!-- ===== DESIGN ===== -->
                 <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200">
                     <h3 class="text-md font-bold text-slate-900 mb-4">עיצוב וצבעים</h3>
                     <div class="grid grid-cols-2 gap-4">
@@ -873,14 +163,14 @@
                     </div>
                     <label class="mt-4 flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
                         <span>
-                            <span class="block font-semibold">חותמת “קורות חיים בקליק”</span>
-                            <span class="block text-[11px] text-slate-500">לוגו קטן ועדין בתחתית, לא חלק מרכזי מהמסמך</span>
+                            <span class="block font-semibold">חותמת "קורות חיים בקליק"</span>
+                            <span class="block text-[11px] text-slate-500">לוגו קטן ועדין בתחתית</span>
                         </span>
                         <input type="checkbox" x-model="settings.watermark" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
                     </label>
                 </div>
 
-                <!-- Personal -->
+                <!-- ===== PERSONAL ===== -->
                 <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200">
                     <h3 class="text-md font-bold text-slate-900 mb-4">פרטים אישיים</h3>
                     <div class="grid grid-cols-2 gap-4">
@@ -895,68 +185,101 @@
                     </div>
                 </div>
 
-                <!-- About -->
-                <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200">
-                    <h3 class="text-md font-bold text-slate-900 mb-4">תקציר מקצועי</h3>
+                <!-- ===== ABOUT ===== -->
+                <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200" x-show="isSectionVisible('about')">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-md font-bold text-slate-900">תקציר מקצועי</h3>
+                        <button @click="showSectionTip('about')" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                    </div>
                     <textarea x-model="personal.about" rows="4" placeholder="פסקה קצרה וממוקדת על הניסיון, החוזקות והשאיפות שלך..." class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition resize-y"></textarea>
                 </div>
 
-                <!-- Experience -->
+                <!-- ===== SECTION MANAGER ===== -->
                 <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-md font-bold text-slate-900">ניסיון תעסוקתי</h3>
-                        <button @click="addExperience()" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold bg-indigo-50 px-2.5 py-1 rounded transition">+ הוסף משרה</button>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-md font-bold text-slate-900">סקציות</h3>
+                        <button @click="sectionManagerOpen = !sectionManagerOpen" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold bg-indigo-50 px-2.5 py-1 rounded transition" x-text="sectionManagerOpen ? 'סגור' : 'נהל סקציות'"></button>
                     </div>
-                    <p x-show="experience.length === 0" class="text-xs text-slate-400 text-center py-4">אין משרות עדיין — לחצו על "הוסף משרה".</p>
-                    <div class="space-y-4">
-                        <template x-for="(exp, index) in experience" :key="index">
-                            <div class="p-4 bg-slate-50 rounded-lg border border-slate-100 relative">
-                                <button @click="removeExperience(index)" class="absolute top-2 left-2 text-slate-400 hover:text-red-500 transition" title="מחק"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div class="col-span-2 sm:col-span-1"><label class="block text-[10px] font-semibold text-slate-500">חברה / מעסיק</label><input type="text" x-model="exp.company" class="w-full text-xs bg-white border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none"></div>
-                                    <div class="col-span-2 sm:col-span-1"><label class="block text-[10px] font-semibold text-slate-500">תפקיד</label><input type="text" x-model="exp.role" class="w-full text-xs bg-white border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none"></div>
-                                    <div class="col-span-2 sm:col-span-1"><label class="block text-[10px] font-semibold text-slate-500">תקופה (למשל 2020 - היום)</label><input type="text" x-model="exp.period" class="w-full text-xs bg-white border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none"></div>
-                                    <div class="col-span-2"><label class="block text-[10px] font-semibold text-slate-500">תיאור והישגים (כל שורה = בולט)</label><textarea x-model="exp.description" rows="3" placeholder="הובלת צוות של 4 מפתחים&#10;שיפור ביצועים ב-35%" class="w-full text-xs bg-white border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none resize-y"></textarea></div>
+
+                    <div x-show="sectionManagerOpen" x-transition class="mb-4 space-y-1.5">
+                        <p class="text-[11px] text-slate-400 mb-2">בחרו אילו סקציות להציג. השתמשו בחצים לשינוי סדר.</p>
+                        <div id="section-sort-list">
+                            <template x-for="sid in settings.sectionOrder" :key="sid">
+                                <div :data-section-id="sid" draggable="true"
+                                     class="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-100 bg-slate-50 text-sm"
+                                     x-show="sid !== 'about'">
+                                    <span class="text-slate-300 cursor-grab select-none">&#x2630;</span>
+                                    <label class="flex items-center gap-2 flex-1 cursor-pointer">
+                                        <input type="checkbox" :checked="isSectionVisible(sid)" @change="toggleSection(sid)"
+                                               class="section-toggle h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span class="text-xs font-medium text-slate-700" x-text="sectionDefs[sid]?.label || sid"></span>
+                                    </label>
+                                    <button @click="moveSectionUp(sid)" class="text-slate-400 hover:text-slate-600 text-[10px] leading-none px-1">&#9650;</button>
+                                    <button @click="moveSectionDown(sid)" class="text-slate-400 hover:text-slate-600 text-[10px] leading-none px-1">&#9660;</button>
                                 </div>
-                            </div>
-                        </template>
+                            </template>
+                        </div>
                     </div>
+
+                    <button @click="runValidation()" class="w-full text-xs text-slate-500 hover:text-indigo-600 bg-slate-50 border border-slate-200 rounded-lg py-2 transition">
+                        בדוק תוכן ובעיות
+                    </button>
                 </div>
 
-                <!-- Education -->
-                <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-md font-bold text-slate-900">השכלה וקורסים</h3>
-                        <button @click="addEducation()" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold bg-indigo-50 px-2.5 py-1 rounded transition">+ הוסף לימודים</button>
-                    </div>
-                    <p x-show="education.length === 0" class="text-xs text-slate-400 text-center py-4">אין לימודים עדיין — לחצו על "הוסף לימודים".</p>
-                    <div class="space-y-4">
-                        <template x-for="(edu, index) in education" :key="index">
-                            <div class="p-4 bg-slate-50 rounded-lg border border-slate-100 relative">
-                                <button @click="removeEducation(index)" class="absolute top-2 left-2 text-slate-400 hover:text-red-500 transition" title="מחק"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div class="col-span-2 sm:col-span-1"><label class="block text-[10px] font-semibold text-slate-500">מוסד לימודים</label><input type="text" x-model="edu.institution" class="w-full text-xs bg-white border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none"></div>
-                                    <div class="col-span-2 sm:col-span-1"><label class="block text-[10px] font-semibold text-slate-500">תואר / תעודה</label><input type="text" x-model="edu.degree" class="w-full text-xs bg-white border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none"></div>
-                                    <div class="col-span-2 sm:col-span-1"><label class="block text-[10px] font-semibold text-slate-500">תקופה</label><input type="text" x-model="edu.period" class="w-full text-xs bg-white border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none"></div>
-                                    <div class="col-span-2"><label class="block text-[10px] font-semibold text-slate-500">פרטים נוספים</label><input type="text" x-model="edu.description" class="w-full text-xs bg-white border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none"></div>
-                                </div>
+                <!-- ===== DYNAMIC LIST SECTIONS ===== -->
+                <template x-for="sid in orderedVisibleSections" :key="sid">
+                    <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-md font-bold text-slate-900" x-text="sectionDefs[sid]?.label || sid"></h3>
+                            <div class="flex items-center gap-2">
+                                <button @click="showSectionTip(sid)" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                                <button @click="addItem(sid)" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold bg-indigo-50 px-2.5 py-1 rounded transition" x-text="'+ ' + (sectionDefs[sid]?.addLabel || 'הוסף')"></button>
                             </div>
-                        </template>
+                        </div>
+                        <p x-show="!$data[sid] || $data[sid].length === 0" class="text-xs text-slate-400 text-center py-4" x-text="sectionDefs[sid]?.emptyLabel || 'אין פריטים עדיין.'"></p>
+                        <div class="space-y-4">
+                            <template x-for="(item, index) in $data[sid]" :key="index">
+                                <div class="p-4 bg-slate-50 rounded-lg border border-slate-100 relative">
+                                    <button @click="removeItem(sid, index)" class="absolute top-2 left-2 text-slate-400 hover:text-red-500 transition" title="מחק">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <template x-for="field in sectionDefs[sid]?.fields || []" :key="field.key">
+                                            <div :class="field.span === 2 ? 'col-span-2' : 'col-span-2 sm:col-span-1'">
+                                                <label class="block text-[10px] font-semibold text-slate-500" x-text="field.label"></label>
+                                                <template x-if="field.type === 'textarea'">
+                                                    <textarea x-model="item[field.key]" :rows="field.rows || 2" :placeholder="field.placeholder || ''" class="w-full text-xs bg-white border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none resize-y"></textarea>
+                                                </template>
+                                                <template x-if="field.type !== 'textarea'">
+                                                    <input type="text" x-model="item[field.key]" :placeholder="field.placeholder || ''" class="w-full text-xs bg-white border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none">
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
                     </div>
-                </div>
+                </template>
 
-                <!-- Skills -->
-                <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200">
-                    <h3 class="text-md font-bold text-slate-900 mb-2">מיומנויות וכלים</h3>
+                <!-- ===== SKILLS ===== -->
+                <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200" x-show="isSectionVisible('skills')">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-md font-bold text-slate-900">מיומנויות וכלים</h3>
+                        <button @click="showSectionTip('skills')" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                    </div>
                     <p class="text-[11px] text-slate-400 mb-3">מופרדות בפסיקים (,)</p>
                     <input type="text" x-model="skillsInput" @input="updateSkills()" placeholder="React, Node.js, ניהול זמן, עבודת צוות" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition">
                 </div>
 
-                <!-- Languages -->
-                <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200">
+                <!-- ===== LANGUAGES ===== -->
+                <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200" x-show="isSectionVisible('languages')">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-md font-bold text-slate-900">שפות</h3>
-                        <button @click="addLanguage()" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold bg-indigo-50 px-2.5 py-1 rounded transition">+ הוסף שפה</button>
+                        <div class="flex items-center gap-2">
+                            <button @click="showSectionTip('languages')" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                            <button @click="addLanguage()" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold bg-indigo-50 px-2.5 py-1 rounded transition">+ הוסף שפה</button>
+                        </div>
                     </div>
                     <p x-show="languages.length === 0" class="text-xs text-slate-400 text-center py-4">אין שפות עדיין — לחצו על "הוסף שפה".</p>
                     <div class="space-y-3">
@@ -964,7 +287,9 @@
                             <div class="flex items-center gap-2">
                                 <input type="text" x-model="lang.name" placeholder="שפה (עברית)" class="w-1/2 text-xs bg-slate-50 border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none">
                                 <input type="text" x-model="lang.level" placeholder="רמה (שפת אם)" class="w-1/2 text-xs bg-slate-50 border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none">
-                                <button @click="removeLanguage(index)" class="text-slate-400 hover:text-red-500 p-1.5 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                                <button @click="removeLanguage(index)" class="text-slate-400 hover:text-red-500 p-1.5 transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
                             </div>
                         </template>
                     </div>
@@ -973,525 +298,20 @@
             </div>
         </section>
 
-        <!-- PREVIEW -->
-        <section x-show="fullPreview || activeTab === 'preview' || isDesktop" class="w-full bg-slate-700 flex-1 overflow-auto p-4 md:p-8 flex items-start justify-center" :class="fullPreview ? 'lg:w-full' : 'lg:w-[58%]'">
+        <!-- ========== PREVIEW PANEL ========== -->
+        <section x-show="fullPreview || activeTab === 'preview' || isDesktop"
+                 class="w-full bg-slate-700 flex-1 overflow-auto p-4 md:p-8 flex items-start justify-center"
+                 :class="fullPreview ? 'lg:w-full' : 'lg:w-[58%]'">
+
             <div class="no-print fixed bottom-4 left-4 z-20 rounded-full bg-white/95 px-4 py-2 text-xs font-semibold shadow-lg border border-slate-200"
                  :class="pageCount > 1 ? 'text-amber-700' : 'text-slate-600'">
                 <span x-text="pageCount > 1 ? `${pageCount} עמודי A4` : 'עמוד A4 אחד'"></span>
             </div>
+
             <div class="preview-scale-container w-full flex justify-center">
                 <div class="cv-page bg-white text-slate-800 relative" dir="rtl"
                      :class="{ 'font-sans': settings.theme !== 'classic', 'font-serif': settings.theme === 'classic' }">
-                    <div class="a4-page-guide no-print" :style="pageGuideStyle"></div>
-                    <div class="cv-page-shell">
-
-                    <!-- ============ THEME 1: MODERN ============ -->
-                    <template x-if="settings.theme === 'modern'">
-                        <div class="h-full min-h-[297mm] flex flex-row">
-
-                            <!-- Sidebar (right) -->
-                            <div class="w-[34%] text-slate-100 px-7 pt-16 pb-8 flex flex-col bg-gradient-to-b" :class="colorMap[settings.color].grad">
-                                <div class="mb-8 flex flex-col items-center text-center">
-                                    <h1 class="font-display font-extrabold text-xl leading-tight" x-text="personal.name || 'השם שלך'"></h1>
-                                    <p class="text-xs text-white/70 mt-1" x-text="personal.title || 'כותרת מקצועית'"></p>
-                                </div>
-
-                                <!-- Contact -->
-                                <div class="mb-7">
-                                    <h3 class="text-[11px] font-bold tracking-[0.2em] uppercase text-white/50 mb-3">פרטי קשר</h3>
-                                    <ul class="space-y-2.5 text-[12px]">
-                                        <template x-if="personal.phone"><li class="flex items-center gap-2.5"><svg class="w-3.5 h-3.5 text-white/60 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg><span class="ltr" x-text="personal.phone"></span></li></template>
-                                        <template x-if="personal.email"><li class="flex items-center gap-2.5"><svg class="w-3.5 h-3.5 text-white/60 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg><span class="ltr break-all" x-text="personal.email"></span></li></template>
-                                        <template x-if="personal.location"><li class="flex items-center gap-2.5"><svg class="w-3.5 h-3.5 text-white/60 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg><span x-text="personal.location"></span></li></template>
-                                        <template x-if="personal.linkedin"><li class="flex items-center gap-2.5"><svg class="w-3.5 h-3.5 text-white/60 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14zM8.34 17V10.2H6.06V17h2.28zM7.2 9.24a1.32 1.32 0 100-2.64 1.32 1.32 0 000 2.64zM18 17v-3.73c0-1.99-.43-3.52-2.75-3.52-1.12 0-1.87.61-2.18 1.2h-.03V10.2H10.8V17h2.28v-3.36c0-.89.17-1.75 1.27-1.75 1.09 0 1.1 1.02 1.1 1.81V17H18z"></path></svg><span class="ltr break-all" x-text="personal.linkedin"></span></li></template>
-                                        <template x-if="personal.website"><li class="flex items-center gap-2.5"><svg class="w-3.5 h-3.5 text-white/60 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg><span class="ltr break-all" x-text="personal.website"></span></li></template>
-                                        <template x-if="personal.github"><li class="flex items-center gap-2.5"><svg class="w-3.5 h-3.5 text-white/60 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.09.68-.22.68-.49v-1.7c-2.78.62-3.37-1.37-3.37-1.37-.46-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.57 2.34 1.12 2.91.85.09-.66.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.34 9.34 0 0112 6.84c.85 0 1.71.12 2.51.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9v2.82c0 .27.18.59.69.49A10.02 10.02 0 0022 12.25C22 6.58 17.52 2 12 2z"></path></svg><span class="ltr break-all" x-text="personal.github"></span></li></template>
-                                    </ul>
-                                </div>
-
-                                <!-- Skills -->
-                                <template x-if="skills.length > 0">
-                                    <div class="mb-7">
-                                        <h3 class="text-[11px] font-bold tracking-[0.2em] uppercase text-white/50 mb-3">מיומנויות</h3>
-                                        <div class="flex flex-wrap gap-1.5">
-                                            <template x-for="(skill, i) in skills" :key="i"><span class="bg-white/10 ring-1 ring-white/15 text-[11px] px-2 py-0.5 rounded-md" x-text="skill"></span></template>
-                                        </div>
-                                    </div>
-                                </template>
-
-                                <!-- Languages with bars -->
-                                <template x-if="languages.length > 0">
-                                    <div class="mb-7">
-                                        <h3 class="text-[11px] font-bold tracking-[0.2em] uppercase text-white/50 mb-3">שפות</h3>
-                                        <ul class="space-y-2.5 text-[12px]">
-                                            <template x-for="(lang, i) in languages" :key="i">
-                                                <li>
-                                                    <div class="flex justify-between mb-1"><span class="font-semibold" x-text="lang.name"></span><span class="text-white/60 text-[11px]" x-text="lang.level"></span></div>
-                                                    <div class="h-1 rounded-full bg-white/15 overflow-hidden"><div class="h-full bg-white/70 rounded-full" :style="`width:${langPercent(lang.level)}%`"></div></div>
-                                                </li>
-                                            </template>
-                                        </ul>
-                                    </div>
-                                </template>
-
-                                <div class="screen-only-footer mt-auto text-[9px] text-white/30">נוצר עם קורות חיים בקליק</div>
-                            </div>
-
-                            <!-- Main content (left) -->
-                            <div class="w-[66%] px-9 pt-20 pb-9">
-                                <template x-if="personal.about">
-                                    <div class="mb-7">
-                                        <h3 class="text-xs font-display font-extrabold tracking-wide mb-2.5 flex items-center gap-2" :class="colorMap[settings.color].text"><span>תקציר מקצועי</span><span class="flex-1 h-px bg-slate-200"></span></h3>
-                                        <p class="text-[12.5px] text-slate-600 leading-relaxed" x-text="personal.about"></p>
-                                    </div>
-                                </template>
-
-                                <template x-if="experience.length > 0">
-                                    <div class="mb-7">
-                                        <h3 class="text-xs font-display font-extrabold tracking-wide mb-4 flex items-center gap-2" :class="colorMap[settings.color].text"><span>ניסיון תעסוקתי</span><span class="flex-1 h-px bg-slate-200"></span></h3>
-                                        <div class="space-y-5 border-r-2 pr-5 mr-1" :class="colorMap[settings.color].border + '/30'">
-                                            <template x-for="(exp, i) in experience" :key="i">
-                                                <div class="relative">
-                                                    <span class="absolute -right-[26px] top-1 w-2.5 h-2.5 rounded-full ring-2 ring-white" :class="colorMap[settings.color].border" :style="`background:${colorMap[settings.color].hex}`"></span>
-                                                    <div class="flex justify-between items-start gap-2 mb-0.5">
-                                                        <h4 class="text-[13.5px] font-bold text-slate-800" x-text="exp.role"></h4>
-                                                        <span class="text-[10.5px] font-semibold text-slate-500 shrink-0 ltr" x-text="exp.period"></span>
-                                                    </div>
-                                                    <p class="text-[12px] font-semibold mb-1.5" :class="colorMap[settings.color].text" x-text="exp.company"></p>
-                                                    <template x-if="hasBullets(exp.description)">
-                                                        <ul class="space-y-1">
-                                                            <template x-for="(line, j) in descLines(exp.description)" :key="j">
-                                                                <li class="flex gap-2 text-[12px] text-slate-600 leading-snug"><span :style="`color:${colorMap[settings.color].hex}`">•</span><span x-text="line"></span></li>
-                                                            </template>
-                                                        </ul>
-                                                    </template>
-                                                    <template x-if="exp.description && !hasBullets(exp.description)"><p class="text-[12px] text-slate-600 leading-relaxed" x-text="exp.description"></p></template>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
-
-                                <template x-if="education.length > 0">
-                                    <div class="mb-2">
-                                        <h3 class="text-xs font-display font-extrabold tracking-wide mb-4 flex items-center gap-2" :class="colorMap[settings.color].text"><span>השכלה</span><span class="flex-1 h-px bg-slate-200"></span></h3>
-                                        <div class="space-y-3.5">
-                                            <template x-for="(edu, i) in education" :key="i">
-                                                <div>
-                                                    <div class="flex justify-between items-start gap-2 mb-0.5"><h4 class="text-[12.5px] font-bold text-slate-800" x-text="edu.degree"></h4><span class="text-[10.5px] font-semibold text-slate-500 shrink-0 ltr" x-text="edu.period"></span></div>
-                                                    <p class="text-[12px] text-slate-600" x-text="edu.institution"></p>
-                                                    <p class="text-[11px] text-slate-400 mt-0.5" x-text="edu.description"></p>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-
-                    <!-- ============ THEME 2: CLASSIC ============ -->
-                    <template x-if="settings.theme === 'classic'">
-                        <div class="px-14 pt-20 pb-12 h-full min-h-[297mm]">
-                            <div class="text-center pb-6 mb-8 border-b-2" :class="colorMap[settings.color].border">
-                                <h1 class="text-[40px] font-black leading-none mb-2" :class="colorMap[settings.color].text" x-text="personal.name || 'השם שלך'"></h1>
-                                <p class="text-lg text-slate-600 mb-4" x-text="personal.title || 'כותרת מקצועית'"></p>
-                                <div class="flex flex-wrap justify-center gap-x-3 gap-y-1 text-[11.5px] text-slate-500 font-sans">
-                                    <template x-if="personal.phone"><span class="ltr" x-text="personal.phone"></span></template>
-                                    <template x-if="personal.email"><span class="ltr" x-text="'✉ ' + personal.email"></span></template>
-                                    <template x-if="personal.location"><span x-text="personal.location"></span></template>
-                                    <template x-if="personal.linkedin"><span class="ltr" x-text="personal.linkedin"></span></template>
-                                    <template x-if="personal.website"><span class="ltr" x-text="personal.website"></span></template>
-                                </div>
-                            </div>
-
-                            <template x-if="personal.about">
-                                <div class="mb-7">
-                                    <h3 class="text-sm font-bold mb-2 pb-1 border-b border-slate-200" :class="colorMap[settings.color].text">תקציר מקצועי</h3>
-                                    <p class="text-[13px] text-slate-700 leading-relaxed" x-text="personal.about"></p>
-                                </div>
-                            </template>
-
-                            <template x-if="experience.length > 0">
-                                <div class="mb-7">
-                                    <h3 class="text-sm font-bold mb-4 pb-1 border-b border-slate-200" :class="colorMap[settings.color].text">ניסיון מקצועי</h3>
-                                    <div class="space-y-5">
-                                        <template x-for="(exp, i) in experience" :key="i">
-                                            <div>
-                                                <div class="flex justify-between items-baseline mb-0.5"><h4 class="text-[14px] font-bold text-slate-800" x-text="exp.role"></h4><span class="text-[11.5px] text-slate-500 ltr font-sans" x-text="exp.period"></span></div>
-                                                <p class="text-[12.5px] italic text-slate-500 mb-1.5" x-text="exp.company"></p>
-                                                <template x-if="hasBullets(exp.description)">
-                                                    <ul class="space-y-1">
-                                                        <template x-for="(line, j) in descLines(exp.description)" :key="j"><li class="flex gap-2 text-[12.5px] text-slate-700 leading-snug"><span :style="`color:${colorMap[settings.color].hex}`">•</span><span x-text="line"></span></li></template>
-                                                    </ul>
-                                                </template>
-                                                <template x-if="exp.description && !hasBullets(exp.description)"><p class="text-[12.5px] text-slate-700 leading-relaxed" x-text="exp.description"></p></template>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
-                            </template>
-
-                            <template x-if="education.length > 0">
-                                <div class="mb-7">
-                                    <h3 class="text-sm font-bold mb-4 pb-1 border-b border-slate-200" :class="colorMap[settings.color].text">השכלה</h3>
-                                    <div class="space-y-3">
-                                        <template x-for="(edu, i) in education" :key="i">
-                                            <div>
-                                                <div class="flex justify-between items-baseline mb-0.5"><h4 class="text-[12.5px] font-bold text-slate-800" x-text="edu.degree"></h4><span class="text-[11px] text-slate-500 ltr font-sans" x-text="edu.period"></span></div>
-                                                <p class="text-[12px] italic text-slate-600" x-text="edu.institution"></p>
-                                                <p class="text-[11.5px] text-slate-500 mt-0.5" x-text="edu.description"></p>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
-                            </template>
-
-                            <div class="grid grid-cols-2 gap-8">
-                                <template x-if="skills.length > 0">
-                                    <div>
-                                        <h3 class="text-sm font-bold mb-2 pb-1 border-b border-slate-200" :class="colorMap[settings.color].text">מיומנויות</h3>
-                                        <p class="text-[12.5px] text-slate-700 leading-relaxed font-sans" x-text="skills.join('  •  ')"></p>
-                                    </div>
-                                </template>
-                                <template x-if="languages.length > 0">
-                                    <div>
-                                        <h3 class="text-sm font-bold mb-2 pb-1 border-b border-slate-200" :class="colorMap[settings.color].text">שפות</h3>
-                                        <ul class="space-y-1 text-[12.5px] font-sans">
-                                            <template x-for="(lang, i) in languages" :key="i"><li class="flex justify-between"><span class="font-semibold text-slate-800" x-text="lang.name"></span><span class="text-slate-500" x-text="lang.level"></span></li></template>
-                                        </ul>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-
-                    <!-- ============ THEME 3: MINIMAL ============ -->
-                    <template x-if="settings.theme === 'minimal'">
-                        <div class="px-14 pt-20 pb-14 h-full min-h-[297mm]">
-                            <div class="flex justify-between items-start gap-6 mb-10">
-                                <div class="border-r-4 pr-4" :class="colorMap[settings.color].border">
-                                    <h1 class="text-[38px] font-display font-black leading-none tracking-tight text-slate-900" x-text="personal.name || 'השם שלך'"></h1>
-                                    <p class="text-sm font-semibold tracking-wide mt-1" :class="colorMap[settings.color].text" x-text="personal.title || 'כותרת מקצועית'"></p>
-                                </div>
-                                <div class="text-[11.5px] text-slate-500 space-y-0.5 text-left shrink-0">
-                                    <p x-show="personal.phone" class="ltr" x-text="personal.phone"></p>
-                                    <p x-show="personal.email" class="ltr" x-text="personal.email"></p>
-                                    <p x-show="personal.location" x-text="personal.location"></p>
-                                    <p x-show="personal.linkedin" class="ltr" x-text="personal.linkedin"></p>
-                                    <p x-show="personal.website" class="ltr" x-text="personal.website"></p>
-                                </div>
-                            </div>
-
-                            <template x-if="personal.about"><p class="text-[13px] text-slate-600 leading-relaxed mb-9 max-w-2xl" x-text="personal.about"></p></template>
-
-                            <template x-if="experience.length > 0">
-                                <div class="mb-9">
-                                    <h3 class="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400 mb-4">ניסיון</h3>
-                                    <div class="space-y-5">
-                                        <template x-for="(exp, i) in experience" :key="i">
-                                            <div class="grid grid-cols-4 gap-3">
-                                                <div class="col-span-1 text-[11px] text-slate-400 ltr text-right" x-text="exp.period"></div>
-                                                <div class="col-span-3">
-                                                    <h4 class="text-[13px] font-bold text-slate-900" x-text="exp.role"></h4>
-                                                    <p class="text-[12px] font-medium text-slate-500 mb-1.5" x-text="exp.company"></p>
-                                                    <template x-if="hasBullets(exp.description)">
-                                                        <ul class="space-y-1">
-                                                            <template x-for="(line, j) in descLines(exp.description)" :key="j"><li class="flex gap-2 text-[12px] text-slate-600 leading-snug"><span class="text-slate-300">—</span><span x-text="line"></span></li></template>
-                                                        </ul>
-                                                    </template>
-                                                    <template x-if="exp.description && !hasBullets(exp.description)"><p class="text-[12px] text-slate-600 leading-relaxed" x-text="exp.description"></p></template>
-                                                </div>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
-                            </template>
-
-                            <template x-if="education.length > 0">
-                                <div class="mb-9">
-                                    <h3 class="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400 mb-4">השכלה</h3>
-                                    <div class="space-y-3">
-                                        <template x-for="(edu, i) in education" :key="i">
-                                            <div class="grid grid-cols-4 gap-3">
-                                                <div class="col-span-1 text-[11px] text-slate-400 ltr text-right" x-text="edu.period"></div>
-                                                <div class="col-span-3">
-                                                    <h4 class="text-[12.5px] font-bold text-slate-900" x-text="edu.degree"></h4>
-                                                    <p class="text-[12px] text-slate-500" x-text="edu.institution"></p>
-                                                    <p class="text-[11px] text-slate-400" x-text="edu.description"></p>
-                                                </div>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
-                            </template>
-
-                            <div class="grid grid-cols-2 gap-8">
-                                <template x-if="skills.length > 0">
-                                    <div>
-                                        <h3 class="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400 mb-3">מיומנויות</h3>
-                                        <div class="flex flex-wrap gap-1.5">
-                                            <template x-for="(skill, i) in skills" :key="i"><span class="text-[11px] font-medium px-2 py-0.5 rounded" :class="colorMap[settings.color].chipBg + ' ' + colorMap[settings.color].chipText" x-text="skill"></span></template>
-                                        </div>
-                                    </div>
-                                </template>
-                                <template x-if="languages.length > 0">
-                                    <div>
-                                        <h3 class="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400 mb-3">שפות</h3>
-                                        <ul class="space-y-1.5 text-[12px]">
-                                            <template x-for="(lang, i) in languages" :key="i"><li class="flex justify-between border-b border-dashed border-slate-200 pb-1"><span class="font-medium text-slate-800" x-text="lang.name"></span><span class="text-slate-400 text-[11px]" x-text="lang.level"></span></li></template>
-                                        </ul>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-
-                    <!-- ============ THEME 4: BANNER ============ -->
-                    <template x-if="settings.theme === 'banner'">
-                        <div class="h-full min-h-[297mm] flex flex-col">
-                            <div class="px-12 pt-12 pb-9 text-white bg-gradient-to-l" :class="colorMap[settings.color].grad">
-                                <div class="flex items-center gap-5">
-                                    <div class="w-20 h-20 rounded-2xl bg-white/10 ring-1 ring-white/25 grid place-items-center font-display font-black text-3xl shrink-0" x-text="initials()"></div>
-                                    <div>
-                                        <h1 class="font-display font-black text-[34px] leading-none" x-text="personal.name || 'השם שלך'"></h1>
-                                        <p class="text-base text-white/80 mt-1.5" x-text="personal.title || 'כותרת מקצועית'"></p>
-                                    </div>
-                                </div>
-                                <div class="flex flex-wrap gap-x-5 gap-y-1 text-[12px] text-white/85 mt-5 font-sans">
-                                    <span x-show="personal.phone" class="ltr" x-text="personal.phone"></span>
-                                    <span x-show="personal.email" class="ltr" x-text="personal.email"></span>
-                                    <span x-show="personal.location" x-text="personal.location"></span>
-                                    <span x-show="personal.linkedin" class="ltr" x-text="personal.linkedin"></span>
-                                    <span x-show="personal.website" class="ltr" x-text="personal.website"></span>
-                                    <span x-show="personal.github" class="ltr" x-text="personal.github"></span>
-                                </div>
-                            </div>
-                            <div class="px-12 pt-9 pb-12 flex-1">
-                                <template x-if="personal.about">
-                                    <div class="mb-7">
-                                        <h3 class="text-sm font-display font-extrabold mb-2 flex items-center gap-2" :class="colorMap[settings.color].text"><span class="w-2.5 h-2.5 rounded-sm" :style="`background:${colorMap[settings.color].hex}`"></span>תקציר מקצועי</h3>
-                                        <p class="text-[13px] text-slate-600 leading-relaxed" x-text="personal.about"></p>
-                                    </div>
-                                </template>
-                                <template x-if="experience.length > 0">
-                                    <div class="mb-7">
-                                        <h3 class="text-sm font-display font-extrabold mb-4 flex items-center gap-2" :class="colorMap[settings.color].text"><span class="w-2.5 h-2.5 rounded-sm" :style="`background:${colorMap[settings.color].hex}`"></span>ניסיון תעסוקתי</h3>
-                                        <div class="space-y-5">
-                                            <template x-for="(exp, i) in experience" :key="i">
-                                                <div>
-                                                    <div class="flex justify-between items-baseline mb-0.5"><h4 class="text-[14px] font-bold text-slate-800" x-text="exp.role"></h4><span class="text-[11px] text-slate-500 ltr font-sans" x-text="exp.period"></span></div>
-                                                    <p class="text-[12.5px] font-semibold mb-1.5" :class="colorMap[settings.color].text" x-text="exp.company"></p>
-                                                    <template x-if="hasBullets(exp.description)">
-                                                        <ul class="space-y-1">
-                                                            <template x-for="(line, j) in descLines(exp.description)" :key="j"><li class="flex gap-2 text-[12.5px] text-slate-600 leading-snug"><span :style="`color:${colorMap[settings.color].hex}`">•</span><span x-text="line"></span></li></template>
-                                                        </ul>
-                                                    </template>
-                                                    <template x-if="exp.description && !hasBullets(exp.description)"><p class="text-[12.5px] text-slate-600 leading-relaxed" x-text="exp.description"></p></template>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
-                                <template x-if="education.length > 0">
-                                    <div class="mb-7">
-                                        <h3 class="text-sm font-display font-extrabold mb-4 flex items-center gap-2" :class="colorMap[settings.color].text"><span class="w-2.5 h-2.5 rounded-sm" :style="`background:${colorMap[settings.color].hex}`"></span>השכלה</h3>
-                                        <div class="space-y-3">
-                                            <template x-for="(edu, i) in education" :key="i">
-                                                <div>
-                                                    <div class="flex justify-between items-baseline"><h4 class="text-[13px] font-bold text-slate-800" x-text="edu.degree"></h4><span class="text-[11px] text-slate-500 ltr font-sans" x-text="edu.period"></span></div>
-                                                    <p class="text-[12px] text-slate-600" x-text="edu.institution"></p>
-                                                    <p class="text-[11px] text-slate-400 mt-0.5" x-text="edu.description"></p>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
-                                <div class="grid grid-cols-2 gap-8">
-                                    <template x-if="skills.length > 0">
-                                        <div>
-                                            <h3 class="text-sm font-display font-extrabold mb-3 flex items-center gap-2" :class="colorMap[settings.color].text"><span class="w-2.5 h-2.5 rounded-sm" :style="`background:${colorMap[settings.color].hex}`"></span>מיומנויות</h3>
-                                            <div class="flex flex-wrap gap-1.5">
-                                                <template x-for="(skill, i) in skills" :key="i"><span class="text-[11px] font-medium px-2 py-0.5 rounded" :class="colorMap[settings.color].chipBg + ' ' + colorMap[settings.color].chipText" x-text="skill"></span></template>
-                                            </div>
-                                        </div>
-                                    </template>
-                                    <template x-if="languages.length > 0">
-                                        <div>
-                                            <h3 class="text-sm font-display font-extrabold mb-3 flex items-center gap-2" :class="colorMap[settings.color].text"><span class="w-2.5 h-2.5 rounded-sm" :style="`background:${colorMap[settings.color].hex}`"></span>שפות</h3>
-                                            <ul class="space-y-1.5 text-[12.5px]">
-                                                <template x-for="(lang, i) in languages" :key="i"><li class="flex justify-between"><span class="font-semibold text-slate-800" x-text="lang.name"></span><span class="text-slate-500 text-[11px]" x-text="lang.level"></span></li></template>
-                                            </ul>
-                                        </div>
-                                    </template>
-                                </div>
-                            </div>
-                        </div>
-                    </template>
-
-                    <!-- ============ THEME 5: EXECUTIVE ============ -->
-                    <template x-if="settings.theme === 'executive'">
-                        <div class="h-full min-h-[297mm] flex flex-row">
-                            <div class="w-[35%] px-7 pt-12 pb-9 flex flex-col" :class="colorMap[settings.color].chipBg">
-                                <div class="mb-8 text-center">
-                                    <div class="w-24 h-24 mx-auto rounded-full grid place-items-center font-display font-black text-3xl text-white mb-3" :style="`background:${colorMap[settings.color].hex}`" x-text="initials()"></div>
-                                    <h1 class="font-display font-extrabold text-[20px] leading-tight text-slate-900" x-text="personal.name || 'השם שלך'"></h1>
-                                    <p class="text-[12px] mt-1" :class="colorMap[settings.color].text" x-text="personal.title || 'כותרת מקצועית'"></p>
-                                </div>
-                                <div class="mb-7">
-                                    <h3 class="text-[11px] font-bold tracking-[0.15em] uppercase mb-3 pb-1.5 border-b" :class="colorMap[settings.color].text + ' ' + colorMap[settings.color].border">פרטי קשר</h3>
-                                    <ul class="space-y-2 text-[11.5px] text-slate-600">
-                                        <li x-show="personal.phone" class="ltr break-all" x-text="personal.phone"></li>
-                                        <li x-show="personal.email" class="ltr break-all" x-text="personal.email"></li>
-                                        <li x-show="personal.location" x-text="personal.location"></li>
-                                        <li x-show="personal.linkedin" class="ltr break-all" x-text="personal.linkedin"></li>
-                                        <li x-show="personal.website" class="ltr break-all" x-text="personal.website"></li>
-                                        <li x-show="personal.github" class="ltr break-all" x-text="personal.github"></li>
-                                    </ul>
-                                </div>
-                                <template x-if="skills.length > 0">
-                                    <div class="mb-7">
-                                        <h3 class="text-[11px] font-bold tracking-[0.15em] uppercase mb-3 pb-1.5 border-b" :class="colorMap[settings.color].text + ' ' + colorMap[settings.color].border">מיומנויות</h3>
-                                        <div class="flex flex-wrap gap-1.5">
-                                            <template x-for="(skill, i) in skills" :key="i"><span class="text-[11px] font-medium px-2 py-0.5 rounded bg-white/70 text-slate-700 ring-1 ring-black/5" x-text="skill"></span></template>
-                                        </div>
-                                    </div>
-                                </template>
-                                <template x-if="languages.length > 0">
-                                    <div>
-                                        <h3 class="text-[11px] font-bold tracking-[0.15em] uppercase mb-3 pb-1.5 border-b" :class="colorMap[settings.color].text + ' ' + colorMap[settings.color].border">שפות</h3>
-                                        <ul class="space-y-1.5 text-[12px]">
-                                            <template x-for="(lang, i) in languages" :key="i"><li class="flex justify-between"><span class="font-semibold text-slate-800" x-text="lang.name"></span><span class="text-slate-500 text-[11px]" x-text="lang.level"></span></li></template>
-                                        </ul>
-                                    </div>
-                                </template>
-                            </div>
-                            <div class="w-[65%] px-9 pt-12 pb-9">
-                                <template x-if="personal.about">
-                                    <div class="mb-7">
-                                        <h3 class="text-sm font-display font-extrabold tracking-wide mb-2.5 uppercase" :class="colorMap[settings.color].text">תקציר מקצועי</h3>
-                                        <p class="text-[12.5px] text-slate-600 leading-relaxed" x-text="personal.about"></p>
-                                    </div>
-                                </template>
-                                <template x-if="experience.length > 0">
-                                    <div class="mb-7">
-                                        <h3 class="text-sm font-display font-extrabold tracking-wide mb-4 uppercase" :class="colorMap[settings.color].text">ניסיון תעסוקתי</h3>
-                                        <div class="space-y-5">
-                                            <template x-for="(exp, i) in experience" :key="i">
-                                                <div class="pr-4 border-r-2" :class="colorMap[settings.color].border">
-                                                    <div class="flex justify-between items-baseline mb-0.5"><h4 class="text-[13.5px] font-bold text-slate-800" x-text="exp.role"></h4><span class="text-[10.5px] text-slate-500 ltr font-sans" x-text="exp.period"></span></div>
-                                                    <p class="text-[12px] font-semibold mb-1.5 text-slate-500" x-text="exp.company"></p>
-                                                    <template x-if="hasBullets(exp.description)">
-                                                        <ul class="space-y-1">
-                                                            <template x-for="(line, j) in descLines(exp.description)" :key="j"><li class="flex gap-2 text-[12px] text-slate-600 leading-snug"><span :style="`color:${colorMap[settings.color].hex}`">•</span><span x-text="line"></span></li></template>
-                                                        </ul>
-                                                    </template>
-                                                    <template x-if="exp.description && !hasBullets(exp.description)"><p class="text-[12px] text-slate-600 leading-relaxed" x-text="exp.description"></p></template>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
-                                <template x-if="education.length > 0">
-                                    <div>
-                                        <h3 class="text-sm font-display font-extrabold tracking-wide mb-4 uppercase" :class="colorMap[settings.color].text">השכלה</h3>
-                                        <div class="space-y-3">
-                                            <template x-for="(edu, i) in education" :key="i">
-                                                <div>
-                                                    <div class="flex justify-between items-baseline"><h4 class="text-[12.5px] font-bold text-slate-800" x-text="edu.degree"></h4><span class="text-[10.5px] text-slate-500 ltr font-sans" x-text="edu.period"></span></div>
-                                                    <p class="text-[12px] text-slate-600" x-text="edu.institution"></p>
-                                                    <p class="text-[11px] text-slate-400 mt-0.5" x-text="edu.description"></p>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-
-                    <!-- ============ THEME 6: COMPACT ============ -->
-                    <template x-if="settings.theme === 'compact'">
-                        <div class="px-12 pt-14 pb-12 h-full min-h-[297mm]">
-                            <div class="pb-3 mb-5 border-b-2" :class="colorMap[settings.color].border">
-                                <h1 class="text-[30px] font-display font-black leading-none text-slate-900" x-text="personal.name || 'השם שלך'"></h1>
-                                <p class="text-[13px] font-semibold mt-1" :class="colorMap[settings.color].text" x-text="personal.title || 'כותרת מקצועית'"></p>
-                                <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-slate-500 mt-2.5 font-sans">
-                                    <span x-show="personal.phone" class="ltr" x-text="personal.phone"></span>
-                                    <span x-show="personal.email" class="ltr" x-text="personal.email"></span>
-                                    <span x-show="personal.location" x-text="personal.location"></span>
-                                    <span x-show="personal.linkedin" class="ltr" x-text="personal.linkedin"></span>
-                                    <span x-show="personal.website" class="ltr" x-text="personal.website"></span>
-                                    <span x-show="personal.github" class="ltr" x-text="personal.github"></span>
-                                </div>
-                            </div>
-                            <template x-if="personal.about">
-                                <p class="text-[12px] text-slate-600 leading-relaxed mb-5" x-text="personal.about"></p>
-                            </template>
-                            <template x-if="experience.length > 0">
-                                <div class="mb-5">
-                                    <h3 class="text-[11px] font-bold tracking-[0.18em] uppercase mb-3" :class="colorMap[settings.color].text">ניסיון תעסוקתי</h3>
-                                    <div class="space-y-3.5">
-                                        <template x-for="(exp, i) in experience" :key="i">
-                                            <div class="grid grid-cols-4 gap-3">
-                                                <div class="col-span-1 text-[10.5px] text-slate-400 ltr text-right pt-0.5" x-text="exp.period"></div>
-                                                <div class="col-span-3">
-                                                    <h4 class="text-[12.5px] font-bold text-slate-800 leading-tight" x-text="exp.role"></h4>
-                                                    <p class="text-[11.5px] font-semibold mb-1" :class="colorMap[settings.color].text" x-text="exp.company"></p>
-                                                    <template x-if="hasBullets(exp.description)">
-                                                        <ul class="space-y-0.5">
-                                                            <template x-for="(line, j) in descLines(exp.description)" :key="j"><li class="flex gap-1.5 text-[11.5px] text-slate-600 leading-snug"><span :style="`color:${colorMap[settings.color].hex}`">•</span><span x-text="line"></span></li></template>
-                                                        </ul>
-                                                    </template>
-                                                    <template x-if="exp.description && !hasBullets(exp.description)"><p class="text-[11.5px] text-slate-600 leading-snug" x-text="exp.description"></p></template>
-                                                </div>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
-                            </template>
-                            <template x-if="education.length > 0">
-                                <div class="mb-5">
-                                    <h3 class="text-[11px] font-bold tracking-[0.18em] uppercase mb-3" :class="colorMap[settings.color].text">השכלה</h3>
-                                    <div class="space-y-2">
-                                        <template x-for="(edu, i) in education" :key="i">
-                                            <div class="grid grid-cols-4 gap-3">
-                                                <div class="col-span-1 text-[10.5px] text-slate-400 ltr text-right pt-0.5" x-text="edu.period"></div>
-                                                <div class="col-span-3">
-                                                    <h4 class="text-[12px] font-bold text-slate-800" x-text="edu.degree"></h4>
-                                                    <p class="text-[11.5px] text-slate-600" x-text="edu.institution"></p>
-                                                    <p class="text-[10.5px] text-slate-400" x-text="edu.description"></p>
-                                                </div>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
-                            </template>
-                            <div class="grid grid-cols-2 gap-6 pt-1">
-                                <template x-if="skills.length > 0">
-                                    <div>
-                                        <h3 class="text-[11px] font-bold tracking-[0.18em] uppercase mb-2.5" :class="colorMap[settings.color].text">מיומנויות</h3>
-                                        <p class="text-[11.5px] text-slate-700 leading-relaxed" x-text="skills.join('  •  ')"></p>
-                                    </div>
-                                </template>
-                                <template x-if="languages.length > 0">
-                                    <div>
-                                        <h3 class="text-[11px] font-bold tracking-[0.18em] uppercase mb-2.5" :class="colorMap[settings.color].text">שפות</h3>
-                                        <ul class="space-y-1 text-[11.5px]">
-                                            <template x-for="(lang, i) in languages" :key="i"><li class="flex justify-between"><span class="font-semibold text-slate-800" x-text="lang.name"></span><span class="text-slate-500 text-[10.5px]" x-text="lang.level"></span></li></template>
-                                        </ul>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-                    </div>
-
-                    <div x-show="settings.watermark" class="brand-watermark">
-                        <img src="assets/logo-mark.svg" alt="" class="brand-watermark__mark">
-                        <span>נוצר עם קורות חיים בקליק</span>
-                    </div>
-
+                    <div class="cv-page-shell" x-html="renderedCV"></div>
                 </div>
             </div>
         </section>

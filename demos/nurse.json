@@ -1,0 +1,74 @@
+{
+    "label": "נועה אברהם · אחות מוסמכת",
+    "personal": {
+        "name": "נועה אברהם",
+        "title": "אחות מוסמכת – טיפול נמרץ",
+        "phone": "052-6549870",
+        "email": "noa.avraham@mail.com",
+        "location": "ירושלים, ישראל",
+        "linkedin": "",
+        "website": "",
+        "github": "",
+        "about": "אחות מוסמכת עם 9 שנות ניסיון במחלקות טיפול נמרץ ומיון. מנוסה בטיפול בחולים קריטיים, בתפעול ציוד רפואי מתקדם ובהדרכת צוותים. בעלת יחס אנושי חם ויכולת תפקוד גבוהה תחת לחץ."
+    },
+    "experience": [
+        {
+            "company": "המרכז הרפואי הדסה עין כרם",
+            "role": "אחות אחראית משמרת – טיפול נמרץ",
+            "period": "2020 - היום",
+            "description": "ניהול וניטור מטופלים במצב קריטי ביחידת טיפול נמרץ\nהדרכה וחניכה של אחיות חדשות בצוות\nהובלת תהליכי שיפור איכות ובטיחות הטיפול"
+        },
+        {
+            "company": "בית חולים שערי צדק",
+            "role": "אחות מיון",
+            "period": "2016 - 2020",
+            "description": "טיפול וקבלת חולים במלר\"ד בעומסים גבוהים\nתיעוד רפואי מדויק ומעקב אחר פרוטוקולים"
+        }
+    ],
+    "education": [
+        {
+            "institution": "אוניברסיטת בן-גוריון בנגב",
+            "degree": "B.A. בסיעוד (R.N.)",
+            "period": "2012 - 2016",
+            "description": "בוגרת מצטיינת. קורס על-בסיסי בטיפול נמרץ."
+        }
+    ],
+    "military": [
+        {
+            "unit": "חיל הרפואה",
+            "role": "חובשת קרבית",
+            "period": "2009 - 2012",
+            "description": "שירות כחובשת קרבית ביחידה מבצעית"
+        }
+    ],
+    "volunteering": [
+        {
+            "organization": "מד\"א",
+            "role": "חובשת מתנדבת",
+            "period": "2013 - 2016",
+            "description": "משמרות הזנקה באמבולנס בירושלים"
+        }
+    ],
+    "projects": [],
+    "certifications": [
+        {
+            "name": "ACLS - החייאה מתקדמת",
+            "issuer": "AHA",
+            "date": "2024",
+            "description": ""
+        }
+    ],
+    "skills": ["טיפול נמרץ", "החייאה (ACLS)", "ניהול תרופתי", "ציוד הנשמה", "תיעוד רפואי", "עבודת צוות", "ניהול משמרת"],
+    "languages": [
+        { "name": "עברית", "level": "שפת אם" },
+        { "name": "אנגלית", "level": "טוב" },
+        { "name": "ערבית", "level": "בסיסי" }
+    ],
+    "settings": {
+        "theme": "executive",
+        "color": "emerald",
+        "watermark": true,
+        "sectionOrder": ["about", "experience", "education", "military", "volunteering", "certifications", "skills", "languages"],
+        "visibleSections": ["about", "experience", "education", "military", "volunteering", "certifications", "skills", "languages"]
+    }
+}

@@ -1,0 +1,128 @@
+/* ============================
+   CV Preview & Export Styles
+   ============================ */
+
+.cv-page {
+    width: 210mm;
+    min-height: 297mm;
+    direction: rtl;
+    text-align: right;
+    box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.25);
+    overflow: visible;
+}
+.cv-page, .cv-page * {
+    box-sizing: border-box;
+}
+.cv-page-shell {
+    min-height: 297mm;
+    position: relative;
+    background: #fff;
+}
+
+/* Preview scaling */
+.preview-scale-container {
+    transform: scale(0.72);
+    transform-origin: top center;
+    min-height: calc(297mm * 0.72 + 2rem);
+}
+.full-preview .preview-scale-container {
+    transform: scale(0.96);
+    min-height: calc(297mm * 0.96 + 2rem);
+}
+@media (min-width: 1536px) { .preview-scale-container { transform: scale(0.82); min-height: calc(297mm * 0.82 + 2rem); } }
+@media (max-width: 1280px) { .preview-scale-container { transform: scale(0.62); min-height: calc(297mm * 0.62 + 2rem); } }
+@media (max-width: 768px)  { .preview-scale-container { transform: scale(0.55); min-height: calc(297mm * 0.55 + 2rem); } }
+@media (max-width: 480px)  { .preview-scale-container { transform: scale(0.42); min-height: calc(297mm * 0.42 + 2rem); } }
+
+/* Export workbench (offscreen rendering) */
+.pdf-workbench {
+    position: fixed;
+    top: 0; left: 0;
+    width: 210mm;
+    min-height: 297mm;
+    z-index: 2147483647;
+    opacity: 0.01;
+    pointer-events: none;
+    background: #fff;
+    overflow: visible;
+    direction: ltr;
+    transform: none !important;
+}
+.exporting-cv {
+    box-shadow: none !important;
+    transform: none !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    direction: rtl !important;
+}
+.exporting-cv * {
+    text-shadow: none !important;
+    -webkit-font-smoothing: antialiased;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+}
+
+/* A4 page guide overlay */
+.a4-page-guide {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+}
+.a4-page-guide::after {
+    content: "A4 export preview";
+    position: absolute;
+    top: 3mm; left: 4mm;
+    direction: ltr;
+    font: 600 9px/1 Assistant, sans-serif;
+    color: rgba(180, 83, 9, .85);
+    background: rgba(255, 251, 235, .9);
+    border: 1px solid rgba(245, 158, 11, .45);
+    border-radius: 3px;
+    padding: 2px 5px;
+}
+
+/* Page break avoidance */
+.avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+/* Watermark */
+.brand-watermark {
+    position: absolute;
+    left: 10mm; bottom: 8mm;
+    z-index: 20;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    direction: rtl;
+    color: rgba(71, 85, 105, .42);
+    font: 700 8.5px/1 Assistant, sans-serif;
+    letter-spacing: 0;
+}
+.brand-watermark__mark {
+    width: 13px; height: 13px;
+    opacity: .55;
+    border-radius: 3px;
+}
+
+/* LTR fields (phone, email, urls) */
+.ltr { direction: ltr; unicode-bidi: embed; }
+
+/* Print styles */
+@media print {
+    body { background: #fff !important; }
+    .no-print { display: none !important; }
+    .preview-scale-container { transform: none !important; width: 100% !important; }
+    .cv-page {
+        width: 100% !important;
+        min-height: 0 !important;
+        box-shadow: none !important;
+    }
+    @page { size: A4; margin: 0; }
+    header, .no-print, [x-show*="fullPreview"] { display: none !important; }
+    main { display: block !important; }
+    section:first-child { display: none !important; }
+}

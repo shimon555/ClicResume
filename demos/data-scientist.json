@@ -1,0 +1,60 @@
+{
+    "label": "מיכל לוי · מדענית נתונים",
+    "personal": {
+        "name": "מיכל לוי",
+        "title": "מדענית נתונים וראשת צוות AI",
+        "phone": "052-9876543",
+        "email": "michal.levy@mail.com",
+        "location": "חיפה, ישראל",
+        "linkedin": "linkedin.com/in/michal-levy",
+        "website": "michal-levy.dev",
+        "github": "github.com/michal-levy",
+        "about": "מדענית נתונים ומפתחת אלגוריתמים בעלת 8 שנות ניסיון באקדמיה ובתעשייה. מומחית בפתרונות NLP מתקדמים, עיבוד תמונה והובלת פרויקטי AI משלב המחקר ועד פרודקשן."
+    },
+    "experience": [
+        {
+            "company": "אלגוריתמיקס מערכות בע\"מ",
+            "role": "ראשת צוות מחקר AI",
+            "period": "2021 - היום",
+            "description": "הובלת צוות של 5 חוקרים ומדעני נתונים לפיתוח מודלי שפה מותאמים אישית\nשיפור דיוק המערכת ב-18% באמצעות ארכיטקטורת רשת ייחודית\nהטמעת מודלים בקנה מידה רחב ב-Docker ו-Kubernetes"
+        },
+        {
+            "company": "רפאל - מערכות מתקדמות",
+            "role": "מהנדסת Machine Learning",
+            "period": "2018 - 2021",
+            "description": "מחקר ופיתוח אלגוריתמים לעיבוד אותות ותמונה\nכתיבת קוד מותאם ביצועים ב-Python ו-C++"
+        }
+    ],
+    "education": [
+        {
+            "institution": "אוניברסיטת בן-גוריון בנגב",
+            "degree": "Ph.D. בהנדסת תעשייה וניהול",
+            "period": "2014 - 2018",
+            "description": "התמחות בבינה מלאכותית. פרסום 3 מאמרים בכנסים מובילים."
+        }
+    ],
+    "military": [
+        {
+            "unit": "יחידה טכנולוגית - חיל המודיעין",
+            "role": "קצינת פיתוח תוכנה",
+            "period": "2010 - 2013",
+            "description": "פיתוח מערכות מידע מבצעיות ואלגוריתמים לעיבוד נתונים"
+        }
+    ],
+    "volunteering": [],
+    "projects": [],
+    "certifications": [],
+    "skills": ["Python", "PyTorch", "TensorFlow", "NLP", "Computer Vision", "Docker", "SQL", "Kubernetes"],
+    "languages": [
+        { "name": "עברית", "level": "שפת אם" },
+        { "name": "אנגלית", "level": "שוטף" },
+        { "name": "צרפתית", "level": "טוב" }
+    ],
+    "settings": {
+        "theme": "modern",
+        "color": "indigo",
+        "watermark": true,
+        "sectionOrder": ["about", "experience", "education", "military", "skills", "languages"],
+        "visibleSections": ["about", "experience", "education", "military", "skills", "languages"]
+    }
+}

@@ -1,87 +1,119 @@
 # Architecture
 
-## החלטה לשלב הראשון
+## סקירה כללית
 
-הפרויקט נשאר אפליקציה סטטית: HTML, CSS ו-JavaScript בדפדפן.
+הפרויקט הוא אפליקציה סטטית שרצה בדפדפן בלבד. אין שרת, אין build step חובה. הקוד מאורגן כ-ES modules שנטענים דרך `<script type="module">`.
 
-הסיבה: המוצר צריך להיות חינמי, קל לפרסום, קל לתרומה, ופרטי כברירת מחדל. אין צורך בשרת כל עוד הנתונים נשמרים מקומית והייצוא מתבצע בדפדפן.
+**חשוב**: לפיתוח מקומי יש להפעיל שרת HTTP (כמו `npx serve` או VS Code Live Server), כי ES modules לא עובדים מ-`file://`.
 
 ## שכבות המערכת
 
-1. ממשק עריכה
-   - טפסים לפרטים אישיים, ניסיון, השכלה, מיומנויות ושפות.
-   - שמירת טיוטה ב-`localStorage`.
+### 1. מודל נתונים (`src/cv-data.js`)
+- סכימת CV מרכזית: `personal`, `experience`, `education`, `military`, `volunteering`, `projects`, `certifications`, `skills`, `languages`.
+- הגדרות ברירת מחדל לכל סוג פריט.
+- מפת צבעים (`COLOR_MAP`) עם 6 ערכות צבעים.
+- פונקציות `snapshot` / `restoreSnapshot` להמרה אל ומ-JSON.
 
-2. מודל נתונים
-   - אובייקט CV פשוט שמכיל `personal`, `experience`, `education`, `skills`, `languages`, ו-`settings`.
-   - בעתיד כדאי לתעד סכימה מסודרת כדי לאפשר ייבוא וייצוא JSON.
+### 2. רישום סקציות (`src/sections.js`)
+- כל סקציה מוגדרת ב-`SECTION_DEFS` עם: מזהה, תווית, אייקון, שדות, ברירות מחדל.
+- סקציות מובנות: ניסיון, השכלה, שירות צבאי, התנדבות, פרויקטים, הסמכות.
+- סקציות מיוחדות: תקציר (טקסט חופשי), מיומנויות (פסיקים), שפות (זוגות שם+רמה).
 
-3. תבניות CV
-   - כמה תבניות RTL בעברית.
-   - כל תבנית קוראת מאותו מודל נתונים.
-   - בעתיד כדאי לפצל כל תבנית לקובץ נפרד.
+### 3. תבניות CV (`src/templates/`)
+- כל תבנית היא פונקציית render טהורה: `(data) => htmlString`.
+- קומפוננטות משותפות ב-`base.js`: יצירת קשר, רשימת פריטים, מיומנויות, שפות, כותרות סקציה.
+- 6 תבניות: modern, classic, minimal, banner, executive, compact.
+- `index.js` מרכז את כולן ומייצא `renderCV(theme, data)`.
 
-4. ייצוא
-   - יצירת clone נקי של ה-CV.
-   - רינדור עם `html2canvas`.
-   - יצירת PDF עם `jsPDF`.
-   - ייצוא תמונה כ-PNG/JPEG.
+### 4. ייצוא (`src/export/`)
+- `pdf.js` — ייצוא PDF איכותי עם html2canvas + jsPDF. כולל חיתוך חכם בין עמודים.
+- `image.js` — ייצוא PNG / JPEG.
+- `json-io.js` — ייבוא/ייצוא JSON לגיבוי ושיתוף.
+- `window.print()` — אפשרות הדפסה ל-PDF עם טקסט ניתן לבחירה.
 
-5. מיתוג וקהילה
-   - לוגו SVG מקומי.
-   - favicon.
-   - manifest בסיסי.
-   - חותמת קרדיט עדינה שאפשר לכבות.
+### 5. אחסון (`src/storage.js`)
+- שמירה וטעינה מ-`localStorage`.
+- מיגרציה אוטומטית מגרסה v2 ל-v3.
+- autosave כל 650ms.
 
-6. Analytics
-   - שכבת events אנונימית בצד הלקוח.
-   - כבויה כברירת מחדל עד להגדרת endpoint.
-   - מיועדת למדוד כניסות, התחלת כתיבה, יצירת CV וייצוא ללא תוכן אישי.
-   - README, רודמאפ, תרומה, רישיון ותבניות GitHub.
+### 6. Analytics (`src/analytics.js`)
+- שכבת events אנונימית, כבויה כברירת מחדל.
+- תומכת ב-GA4 או endpoint מותאם.
+- אף פעם לא שולחת תוכן CV.
 
-## מבנה קבצים נוכחי
+### 7. i18n (`src/i18n.js`)
+- תשתית בסיסית לתמיכה רב-שפתית.
+- כל המחרוזות מרוכזות במקום אחד.
+- עברית מלאה, אנגלית — תשתית מוכנה.
 
-```text
+### 8. עזרי כתיבה (`src/writing-tips.js`)
+- טיפים לכתיבה לפי סקציה.
+- ולידציות: אימייל, טלפון, אורך תקציר, ניסיון ללא תיאור.
+
+### 9. סידור סקציות (`src/drag-sort.js`)
+- Drag & Drop עם HTML5 API.
+- כפתורי חצים כחלופה.
+- המשתמש בוחר אילו סקציות להציג ובאיזה סדר.
+
+### 10. אפליקציה ראשית (`src/app.js`)
+- רושם Alpine.js component `cvApp`.
+- מייבא את כל המודולים ומחבר ביניהם.
+- ה-HTML בתצוגה המקדימה מרונדר דרך `x-html="renderedCV"`.
+
+## מבנה קבצים
+
+```
 .
-├── index.html
-├── README.md
-├── ROADMAP.md
-├── ARCHITECTURE.md
-├── CONTRIBUTING.md
-├── LICENSE
+├── index.html              # Shell — HTML structure + Alpine bindings
+├── src/
+│   ├── app.js              # Alpine component registration
+│   ├── cv-data.js          # Data model & defaults
+│   ├── sections.js         # Section registry
+│   ├── storage.js          # localStorage persistence
+│   ├── analytics.js        # Anonymous analytics
+│   ├── i18n.js             # Internationalization
+│   ├── writing-tips.js     # Tips & validation
+│   ├── drag-sort.js        # Drag & drop ordering
+│   ├── templates/
+│   │   ├── index.js        # Template registry
+│   │   ├── base.js         # Shared rendering utilities
+│   │   ├── modern.js       # Modern two-column
+│   │   ├── classic.js      # Classic serif
+│   │   ├── minimal.js      # Minimalist grid
+│   │   ├── banner.js       # Wide banner header
+│   │   ├── executive.js    # Executive sidebar
+│   │   └── compact.js      # Compact dense
+│   ├── export/
+│   │   ├── pdf.js          # PDF export
+│   │   ├── image.js        # PNG/JPEG export
+│   │   └── json-io.js      # JSON import/export
+│   └── styles/
+│       ├── app.css         # Editor styles
+│       └── cv.css          # CV preview & print styles
+├── demos/
+│   ├── data-scientist.json
+│   ├── marketing.json
+│   ├── nurse.json
+│   └── accountant.json
+├── assets/
+│   ├── logo.svg
+│   └── logo-mark.svg
+├── docs/
 └── .github/
 ```
 
-## מבנה רצוי בהמשך
+## טכנולוגיות
 
-```text
-.
-├── index.html
-├── src/
-│   ├── app.js
-│   ├── export.js
-│   ├── storage.js
-│   ├── cv-schema.js
-│   ├── styles.css
-│   └── templates/
-│       ├── modern.js
-│       ├── classic.js
-│       └── compact.js
-├── content/
-│   ├── he.json
-│   └── en.json
-└── docs/
-```
+- **Alpine.js 3** — ריאקטיביות וניהול מצב
+- **Tailwind CSS (CDN)** — עיצוב
+- **html2canvas + jsPDF** — ייצוא PDF ותמונה
+- **ES Modules** — מודולריות ללא build
+- **Google Fonts** — Assistant, Heebo, Frank Ruhl Libre
 
 ## פרטיות
 
-ברירת המחדל היא שאין שרת ואין איסוף נתונים. אם בעתיד יתווסף פיצ'ר שמצריך שרת, הוא צריך להיות אופציונלי וברור למשתמש.
+ברירת המחדל: אין שרת, אין איסוף נתונים. Analytics כבוי עד שמוגדר endpoint. תוכן CV נשאר בדפדפן.
 
 ## תמיכה באנגלית בעתיד
 
-התמיכה באנגלית לא צריכה להיות רק תרגום טקסטים. היא דורשת:
-
-- שינוי כיוון ל-LTR.
-- התאמת תבניות.
-- שמות שדות ותוכן עזרה באנגלית.
-- בדיקת ייצוא PDF באנגלית ובעברית בנפרד.
+התשתית מוכנה ב-`i18n.js`. הוספת אנגלית דורשת: תרגום מחרוזות, שינוי כיוון ל-LTR, התאמת תבניות, ובדיקת ייצוא.
