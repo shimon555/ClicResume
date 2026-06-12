@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">קורות חיים בקליק</title>
+  <desc id="desc">סמל דף קורות חיים עם סימן קליק</desc>
+  <defs>
+    <linearGradient id="paper" x1="18" y1="8" x2="50" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#eef2ff"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="10" y1="8" x2="58" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563eb"/>
+      <stop offset=".55" stop-color="#4f46e5"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="#0f172a"/>
+  <path d="M18 10h22l10 10v34H18z" fill="url(#paper)"/>
+  <path d="M40 10v11h10z" fill="#c7d2fe"/>
+  <path d="M24 27h17M24 34h13M24 41h10" fill="none" stroke="#475569" stroke-width="3" stroke-linecap="round"/>
+  <path d="M45 38l9 9-5 1.2 3.4 5.8-4.1 2.3-3.3-5.7-3.5 3.6z" fill="url(#accent)" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 96" role="img" aria-labelledby="title desc">
+  <title id="title">קורות חיים בקליק</title>
+  <desc id="desc">לוגו של מחולל קורות חיים חינמי בעברית</desc>
+  <defs>
+    <linearGradient id="markAccent" x1="8" y1="8" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563eb"/>
+      <stop offset=".55" stop-color="#4f46e5"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect x="330" y="12" width="64" height="64" rx="18" fill="#0f172a"/>
+  <path d="M348 22h22l10 10v34h-32z" fill="#ffffff"/>
+  <path d="M370 22v11h10z" fill="#c7d2fe"/>
+  <path d="M354 39h17M354 46h13M354 53h10" fill="none" stroke="#475569" stroke-width="3" stroke-linecap="round"/>
+  <path d="M375 50l9 9-5 1.2 3.4 5.8-4.1 2.3-3.3-5.7-3.5 3.6z" fill="url(#markAccent)" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
+  <text x="310" y="44" direction="rtl" text-anchor="end" font-family="Heebo, Assistant, Arial, sans-serif" font-size="30" font-weight="900" fill="#0f172a">קורות חיים בקליק</text>
+  <text x="310" y="66" direction="rtl" text-anchor="end" font-family="Assistant, Arial, sans-serif" font-size="14" font-weight="700" fill="#475569">מחולל קורות חיים חינמי בעברית</text>
+</svg>

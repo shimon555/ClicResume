@@ -1,0 +1,19 @@
+{
+  "name": "קורות חיים בקליק",
+  "short_name": "CV בקליק",
+  "description": "מחולל קורות חיים חינמי בעברית, עם שמירה מקומית וייצוא PDF.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#0f172a",
+  "dir": "rtl",
+  "lang": "he",
+  "icons": [
+    {
+      "src": "assets/logo-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
