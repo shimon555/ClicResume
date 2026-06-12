@@ -14,7 +14,11 @@ import { exportJson, importJson } from './export/json-io.js';
 import { validate, getTips, getRandomTip } from './writing-tips.js';
 import { initDragSort, moveSection } from './drag-sort.js';
 
-document.addEventListener('alpine:init', () => {
+/**
+ * Register the cvApp Alpine component.
+ * Called from index.html after Alpine is loaded but before Alpine.start().
+ */
+export function registerApp() {
     Alpine.data('cvApp', () => {
         const empty = createEmptyCV();
 
@@ -342,4 +346,4 @@ document.addEventListener('alpine:init', () => {
             }
         };
     });
-});
+}
