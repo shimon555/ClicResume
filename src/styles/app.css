@@ -23,13 +23,37 @@
     cursor: grabbing;
 }
 
-/* Tip bubble */
-.tip-bubble {
-    animation: tipSlideIn 0.2s ease-out;
+/* Tip popover (speech bubble) */
+.tip-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 220px;
+    max-width: 280px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 10px 14px 10px 28px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+    z-index: 50;
+    animation: tipPopIn 0.18s ease-out;
+    direction: rtl;
 }
-@keyframes tipSlideIn {
-    from { opacity: 0; transform: translateY(-6px); }
-    to { opacity: 1; transform: translateY(0); }
+.tip-popover-arrow {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 12px;
+    height: 12px;
+    background: #fffbeb;
+    border-top: 1px solid #fde68a;
+    border-left: 1px solid #fde68a;
+}
+@keyframes tipPopIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 /* Validation pill */

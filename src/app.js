@@ -37,6 +37,7 @@ export function registerApp() {
             showTips: false,
             currentTipSection: '',
             currentTip: '',
+            tipTargetSection: '',
             validationIssues: [],
             sectionManagerOpen: false,
             renderedCV: '',
@@ -236,16 +237,25 @@ export function registerApp() {
                 };
                 this.validationIssues = validate(data);
             },
-            showSectionTip(sectionId) {
+            toggleTip($event, sectionId) {
+                if (this.showTips && this.tipTargetSection === sectionId) {
+                    this.hideTip();
+                    return;
+                }
                 const tip = getRandomTip(sectionId);
                 if (tip) {
                     this.currentTipSection = SECTION_DEFS[sectionId]?.label || sectionId;
                     this.currentTip = tip;
+                    this.tipTargetSection = sectionId;
                     this.showTips = true;
                 }
             },
+            showSectionTip(sectionId) {
+                this.toggleTip(null, sectionId);
+            },
             hideTip() {
                 this.showTips = false;
+                this.tipTargetSection = '';
             },
 
             // --- Clear ---

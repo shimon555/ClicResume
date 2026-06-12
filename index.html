@@ -116,20 +116,14 @@
         </div>
 
         <!-- ========== EDITOR PANEL ========== -->
-        <section x-show="!fullPreview && (activeTab === 'edit' || isDesktop)" class="w-full lg:w-[42%] bg-slate-50 border-l border-slate-200 flex flex-col no-print">
-            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 lg:max-h-[calc(100vh-72px)]">
+        <section x-show="!fullPreview && (activeTab === 'edit' || isDesktop)" class="w-full lg:w-[42%] lg:max-h-[calc(100vh-72px)] bg-slate-50 border-l border-slate-200 flex flex-col no-print overflow-hidden">
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
 
                 <!-- Intro -->
                 <div class="bg-white border-r-4 border-indigo-500 p-4 rounded-l-md mb-6 shadow-sm">
                     <p class="text-xs text-slate-600 leading-relaxed">מלאו את הפרטים והם יתעדכנו מיד בתצוגה המקדימה. הטיוטה נשמרת בדפדפן המקומי בלבד.</p>
                 </div>
 
-                <!-- Tip bubble -->
-                <div x-show="showTips" x-transition class="tip-bubble bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 relative">
-                    <button @click="hideTip()" class="absolute top-2 left-2 text-amber-400 hover:text-amber-600 text-sm leading-none">&times;</button>
-                    <p class="text-[11px] font-bold text-amber-800 mb-1" x-text="currentTipSection"></p>
-                    <p class="text-xs text-amber-700" x-text="currentTip"></p>
-                </div>
 
                 <!-- Validation issues -->
                 <div x-show="validationIssues.length > 0" class="mb-4 space-y-1">
@@ -165,13 +159,6 @@
                             </select>
                         </div>
                     </div>
-                    <label class="mt-4 flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                        <span>
-                            <span class="block font-semibold">חותמת "קורות חיים בקליק"</span>
-                            <span class="block text-[11px] text-slate-500">לוגו קטן ועדין בתחתית</span>
-                        </span>
-                        <input type="checkbox" x-model="settings.watermark" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                    </label>
                 </div>
 
                 <!-- ===== PERSONAL ===== -->
@@ -193,7 +180,14 @@
                 <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200" x-show="isSectionVisible('about')">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-md font-bold text-slate-900">תקציר מקצועי</h3>
-                        <button @click="showSectionTip('about')" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                        <div class="relative">
+                            <button @click="toggleTip($event, 'about')" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                            <div x-show="showTips && tipTargetSection === 'about'" x-transition @click.outside="hideTip()" class="tip-popover">
+                                <div class="tip-popover-arrow"></div>
+                                <button @click="hideTip()" class="absolute top-1.5 left-1.5 text-amber-400 hover:text-amber-600 text-sm leading-none">&times;</button>
+                                <p class="text-xs text-amber-700" x-text="currentTip"></p>
+                            </div>
+                        </div>
                     </div>
                     <textarea x-model="personal.about" rows="4" placeholder="פסקה קצרה וממוקדת על הניסיון, החוזקות והשאיפות שלך..." class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition resize-y"></textarea>
                 </div>
@@ -236,7 +230,14 @@
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-md font-bold text-slate-900" x-text="sectionDefs[sid]?.label || sid"></h3>
                             <div class="flex items-center gap-2">
-                                <button @click="showSectionTip(sid)" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                                <div class="relative">
+                                    <button @click="toggleTip($event, sid)" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                                    <div x-show="showTips && tipTargetSection === sid" x-transition @click.outside="hideTip()" class="tip-popover">
+                                        <div class="tip-popover-arrow"></div>
+                                        <button @click="hideTip()" class="absolute top-1.5 left-1.5 text-amber-400 hover:text-amber-600 text-sm leading-none">&times;</button>
+                                        <p class="text-xs text-amber-700" x-text="currentTip"></p>
+                                    </div>
+                                </div>
                                 <button @click="addItem(sid)" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold bg-indigo-50 px-2.5 py-1 rounded transition" x-text="'+ ' + (sectionDefs[sid]?.addLabel || 'הוסף')"></button>
                             </div>
                         </div>
@@ -270,7 +271,14 @@
                 <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200" x-show="isSectionVisible('skills')">
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="text-md font-bold text-slate-900">מיומנויות וכלים</h3>
-                        <button @click="showSectionTip('skills')" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                        <div class="relative">
+                            <button @click="toggleTip($event, 'skills')" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                            <div x-show="showTips && tipTargetSection === 'skills'" x-transition @click.outside="hideTip()" class="tip-popover">
+                                <div class="tip-popover-arrow"></div>
+                                <button @click="hideTip()" class="absolute top-1.5 left-1.5 text-amber-400 hover:text-amber-600 text-sm leading-none">&times;</button>
+                                <p class="text-xs text-amber-700" x-text="currentTip"></p>
+                            </div>
+                        </div>
                     </div>
                     <p class="text-[11px] text-slate-400 mb-3">מופרדות בפסיקים (,)</p>
                     <input type="text" x-model="skillsInput" @input="updateSkills()" placeholder="React, Node.js, ניהול זמן, עבודת צוות" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition">
@@ -281,7 +289,14 @@
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-md font-bold text-slate-900">שפות</h3>
                         <div class="flex items-center gap-2">
-                            <button @click="showSectionTip('languages')" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                            <div class="relative">
+                                <button @click="toggleTip($event, 'languages')" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                                <div x-show="showTips && tipTargetSection === 'languages'" x-transition @click.outside="hideTip()" class="tip-popover">
+                                    <div class="tip-popover-arrow"></div>
+                                    <button @click="hideTip()" class="absolute top-1.5 left-1.5 text-amber-400 hover:text-amber-600 text-sm leading-none">&times;</button>
+                                    <p class="text-xs text-amber-700" x-text="currentTip"></p>
+                                </div>
+                            </div>
                             <button @click="addLanguage()" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold bg-indigo-50 px-2.5 py-1 rounded transition">+ הוסף שפה</button>
                         </div>
                     </div>

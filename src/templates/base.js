@@ -183,9 +183,8 @@ export function sectionHeading(title, colorKey, style = 'line') {
     return `<h3 class="text-sm font-bold mb-3 ${c.text}">${esc(title)}</h3>`;
 }
 
-/** Render the watermark */
-export function renderWatermark(show) {
-    if (!show) return '';
+/** Render the watermark (always shown) */
+export function renderWatermark() {
     return `<div class="brand-watermark">
         <img src="assets/logo-mark.svg" alt="" class="brand-watermark__mark">
         <span>נוצר עם קורות חיים בקליק</span>

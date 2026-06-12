@@ -82,7 +82,6 @@ export function render(data) {
                 <p class="text-xs text-white/70 mt-1">${esc(p.title) || 'כותרת מקצועית'}</p>
             </div>
             ${sidebarBody}
-            <div class="screen-only-footer mt-auto text-[9px] text-white/30">נוצר עם קורות חיים בקליק</div>
         </div>
         <div class="w-[66%] px-9 pt-20 pb-9">
             ${mainBody}
