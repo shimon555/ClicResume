@@ -15,6 +15,21 @@
     <meta property="og:image" content="assets/logo.svg">
     <link rel="canonical" href="https://clicresume.com">
 
+    <!-- Google tag (gtag.js) — consent mode v2: denied by default -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-F4XC4GMQLH"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('consent', 'default', {
+            analytics_storage: 'denied',
+            ad_storage: 'denied',
+            ad_user_data: 'denied',
+            ad_personalization: 'denied'
+        });
+        gtag('js', new Date());
+        gtag('config', 'G-F4XC4GMQLH', { anonymize_ip: true });
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -845,10 +860,16 @@
             try { return localStorage.getItem(CONSENT_KEY); } catch { return null; }
         }
 
+        function grantGtagConsent() {
+            gtag('consent', 'update', {
+                analytics_storage: 'granted'
+            });
+        }
+
         function acceptConsent() {
             try { localStorage.setItem(CONSENT_KEY, 'accepted'); } catch {}
             document.getElementById('consent-banner').style.display = 'none';
-            loadAnalyticsScripts();
+            grantGtagConsent();
         }
 
         function declineConsent() {
@@ -856,38 +877,14 @@
             document.getElementById('consent-banner').style.display = 'none';
         }
 
-        function loadAnalyticsScripts() {
-            // GA4 — uncomment and set your ID when ready
-            // const gaId = 'G-XXXXXXXXXX';
-            // window.dataLayer = window.dataLayer || [];
-            // window.gtag = function() { dataLayer.push(arguments); };
-            // gtag('js', new Date());
-            // gtag('config', gaId, { anonymize_ip: true });
-            // const gs = document.createElement('script');
-            // gs.async = true;
-            // gs.src = 'https://www.googletagmanager.com/gtag/js?id=' + gaId;
-            // document.head.appendChild(gs);
-
-            // Vercel Web Analytics — uncomment when deployed on Vercel
-            // const vs = document.createElement('script');
-            // vs.defer = true;
-            // vs.src = '/_vercel/insights/script.js';
-            // document.head.appendChild(vs);
-        }
-
-        // On page load: show consent banner if no choice made, or load analytics if accepted
+        // On page load: grant consent if already accepted, or show banner
         (function initConsent() {
             const consent = getStoredConsent();
             if (consent === 'accepted') {
-                loadAnalyticsScripts();
+                grantGtagConsent();
             } else if (!consent) {
                 document.getElementById('consent-banner').style.display = '';
             }
-            // Vercel Speed Insights — non-personal, always OK
-            // const si = document.createElement('script');
-            // si.defer = true;
-            // si.src = '/_vercel/speed-insights/script.js';
-            // document.head.appendChild(si);
         })();
     </script>
 

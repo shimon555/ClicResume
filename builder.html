@@ -13,6 +13,21 @@
     <meta property="og:type" content="website">
     <meta property="og:image" content="assets/logo.svg">
 
+    <!-- Google tag (gtag.js) — consent mode v2: denied by default -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-F4XC4GMQLH"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('consent', 'default', {
+            analytics_storage: 'denied',
+            ad_storage: 'denied',
+            ad_user_data: 'denied',
+            ad_personalization: 'denied'
+        });
+        gtag('js', new Date());
+        gtag('config', 'G-F4XC4GMQLH', { anonymize_ip: true });
+    </script>
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- PDF/image export dependencies -->
@@ -57,6 +72,7 @@
         }
         window.acceptConsent = function() {
             setConsent('accepted');
+            gtag('consent', 'update', { analytics_storage: 'granted' });
             document.getElementById('consent-banner').style.display = 'none';
         };
         window.declineConsent = function() {
@@ -65,7 +81,9 @@
         };
         // Show banner or init analytics
         const consent = getStoredConsent();
-        if (!consent) {
+        if (consent === 'accepted') {
+            gtag('consent', 'update', { analytics_storage: 'granted' });
+        } else if (!consent) {
             document.getElementById('consent-banner').style.display = '';
         }
         autoInit();
