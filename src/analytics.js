@@ -132,9 +132,6 @@ export function configure(newConfig) {
 /* ── Auto-init ── */
 
 export function autoInit() {
-    // TODO: Set your IDs here when ready:
-    // configure({ gaMeasurementId: 'G-F4XC4GMQLH', vercelAnalytics: true });
-
     // Load Speed Insights (non-personal, always OK)
     initSpeedInsights();
 
