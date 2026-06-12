@@ -11,7 +11,7 @@
 
 const config = {
     enabled: false,
-    gaMeasurementId: '',  // e.g. 'G-XXXXXXXXXX'
+    gaMeasurementId: 'G-F4XC4GMQLH',
     vercelAnalytics: false,
     endpoint: '',
     siteId: 'clicresume'
@@ -133,7 +133,7 @@ export function configure(newConfig) {
 
 export function autoInit() {
     // TODO: Set your IDs here when ready:
-    // configure({ gaMeasurementId: 'G-XXXXXXXXXX', vercelAnalytics: true });
+    // configure({ gaMeasurementId: 'G-F4XC4GMQLH', vercelAnalytics: true });
 
     // Load Speed Insights (non-personal, always OK)
     initSpeedInsights();
