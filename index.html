@@ -267,17 +267,17 @@
         <button onclick="this.parentElement.remove()" class="mr-3 text-amber-800 hover:text-amber-950 font-black text-sm">&times;</button>
     </div>
 
-    <!-- ==================== COOKIE CONSENT ==================== -->
+    <!-- ==================== COOKIE CONSENT (GDPR-compliant) ==================== -->
     <div id="consent-banner" style="display:none" class="fixed bottom-0 inset-x-0 z-[60] bg-slate-900/95 backdrop-blur-lg text-white p-5 shadow-2xl border-t border-slate-700">
         <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center gap-4">
             <div class="flex-1 text-sm text-slate-300 leading-relaxed">
-                <p class="font-bold text-white mb-1">פרטיות ואנליטיקס</p>
-                <p>אנחנו משתמשים ב-cookies וכלי אנליטיקס (Google Analytics, Vercel) כדי לשפר את חוויית השימוש. אנחנו <strong class="text-white">לא אוספים</strong> תוכן קורות חיים, שמות, טלפונים או מידע אישי — רק נתוני שימוש אנונימיים.</p>
+                <p class="font-bold text-white mb-1">האתר משתמש ב-cookies</p>
+                <p>אנחנו משתמשים ב-cookies של Google Analytics כדי לדעת כמה אנשים מבקרים באתר וכמה קורות חיים הורדו. <strong class="text-white">אנחנו לא אוספים תוכן קורות חיים, שמות, טלפונים או כל מידע אישי</strong> — רק סטטיסטיקות שימוש אנונימיות. האתר פועל באופן מלא גם ללא cookies.</p>
                 <a href="privacy.html" class="text-indigo-400 hover:text-indigo-300 underline text-xs mt-1 inline-block">מדיניות פרטיות מלאה</a>
             </div>
-            <div class="flex gap-2 shrink-0">
-                <button onclick="acceptConsent()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition">מאשר</button>
-                <button onclick="declineConsent()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-5 rounded-xl text-sm transition">לא, תודה</button>
+            <div class="flex gap-3 shrink-0">
+                <button onclick="acceptConsent()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-6 rounded-xl text-sm transition">אישור</button>
+                <button onclick="declineConsent()" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 px-6 rounded-xl text-sm transition">דחייה</button>
             </div>
         </div>
     </div>
