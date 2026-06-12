@@ -246,6 +246,27 @@
 </head>
 <body class="bg-white text-slate-800 font-sans antialiased">
 
+    <!-- ==================== MOBILE NOTICE ==================== -->
+    <div id="mobile-notice" class="md:hidden fixed top-0 inset-x-0 z-[60] bg-amber-500 text-amber-950 text-center py-2.5 px-4 text-xs font-semibold shadow-md">
+        <span>האתר מותאם כרגע למחשב. תצוגת מובייל בפיתוח</span>
+        <button onclick="this.parentElement.remove()" class="mr-3 text-amber-800 hover:text-amber-950 font-black text-sm">&times;</button>
+    </div>
+
+    <!-- ==================== COOKIE CONSENT ==================== -->
+    <div id="consent-banner" style="display:none" class="fixed bottom-0 inset-x-0 z-[60] bg-slate-900/95 backdrop-blur-lg text-white p-5 shadow-2xl border-t border-slate-700">
+        <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center gap-4">
+            <div class="flex-1 text-sm text-slate-300 leading-relaxed">
+                <p class="font-bold text-white mb-1">פרטיות ואנליטיקס</p>
+                <p>אנחנו משתמשים ב-cookies וכלי אנליטיקס (Google Analytics, Vercel) כדי לשפר את חוויית השימוש. אנחנו <strong class="text-white">לא אוספים</strong> תוכן קורות חיים, שמות, טלפונים או מידע אישי — רק נתוני שימוש אנונימיים.</p>
+                <a href="privacy.html" class="text-indigo-400 hover:text-indigo-300 underline text-xs mt-1 inline-block">מדיניות פרטיות מלאה</a>
+            </div>
+            <div class="flex gap-2 shrink-0">
+                <button onclick="acceptConsent()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition">מאשר</button>
+                <button onclick="declineConsent()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-5 rounded-xl text-sm transition">לא, תודה</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== NAVBAR ==================== -->
     <nav class="fixed top-0 inset-x-0 z-50 transition-all duration-300" id="navbar">
         <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -759,7 +780,7 @@
                     <a href="builder.html" class="hover:text-white transition">יצירת קורות חיים</a>
                     <a href="#features" class="hover:text-white transition">יתרונות</a>
                     <a href="#faq" class="hover:text-white transition">שאלות נפוצות</a>
-                    <a href="https://github.com/shimonamsellem/ClicResume" target="_blank" rel="noopener" class="hover:text-white transition flex items-center gap-1.5">
+                    <a href="https://github.com/shimon555/ClicResume" target="_blank" rel="noopener" class="hover:text-white transition flex items-center gap-1.5">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
                         GitHub
                     </a>
@@ -815,6 +836,58 @@
                 p.style.animationDelay = (Math.random() * 15) + 's';
                 container.appendChild(p);
             }
+        })();
+
+        // ── Consent Management ──
+        const CONSENT_KEY = 'clicresume_analytics_consent';
+
+        function getStoredConsent() {
+            try { return localStorage.getItem(CONSENT_KEY); } catch { return null; }
+        }
+
+        function acceptConsent() {
+            try { localStorage.setItem(CONSENT_KEY, 'accepted'); } catch {}
+            document.getElementById('consent-banner').style.display = 'none';
+            loadAnalyticsScripts();
+        }
+
+        function declineConsent() {
+            try { localStorage.setItem(CONSENT_KEY, 'declined'); } catch {}
+            document.getElementById('consent-banner').style.display = 'none';
+        }
+
+        function loadAnalyticsScripts() {
+            // GA4 — uncomment and set your ID when ready
+            // const gaId = 'G-XXXXXXXXXX';
+            // window.dataLayer = window.dataLayer || [];
+            // window.gtag = function() { dataLayer.push(arguments); };
+            // gtag('js', new Date());
+            // gtag('config', gaId, { anonymize_ip: true });
+            // const gs = document.createElement('script');
+            // gs.async = true;
+            // gs.src = 'https://www.googletagmanager.com/gtag/js?id=' + gaId;
+            // document.head.appendChild(gs);
+
+            // Vercel Web Analytics — uncomment when deployed on Vercel
+            // const vs = document.createElement('script');
+            // vs.defer = true;
+            // vs.src = '/_vercel/insights/script.js';
+            // document.head.appendChild(vs);
+        }
+
+        // On page load: show consent banner if no choice made, or load analytics if accepted
+        (function initConsent() {
+            const consent = getStoredConsent();
+            if (consent === 'accepted') {
+                loadAnalyticsScripts();
+            } else if (!consent) {
+                document.getElementById('consent-banner').style.display = '';
+            }
+            // Vercel Speed Insights — non-personal, always OK
+            // const si = document.createElement('script');
+            // si.defer = true;
+            // si.src = '/_vercel/speed-insights/script.js';
+            // document.head.appendChild(si);
         })();
     </script>
 

@@ -46,11 +46,53 @@
         import Alpine from 'https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/module.esm.js';
         window.Alpine = Alpine;
         const { registerApp } = await import('./src/app.js');
+        const { autoInit, setConsent } = await import('./src/analytics.js');
         registerApp();
         Alpine.start();
+
+        // ── Consent Management ──
+        const CONSENT_KEY = 'clicresume_analytics_consent';
+        function getStoredConsent() {
+            try { return localStorage.getItem(CONSENT_KEY); } catch { return null; }
+        }
+        window.acceptConsent = function() {
+            setConsent('accepted');
+            document.getElementById('consent-banner').style.display = 'none';
+        };
+        window.declineConsent = function() {
+            setConsent('declined');
+            document.getElementById('consent-banner').style.display = 'none';
+        };
+        // Show banner or init analytics
+        const consent = getStoredConsent();
+        if (!consent) {
+            document.getElementById('consent-banner').style.display = '';
+        }
+        autoInit();
     </script>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans h-screen antialiased flex flex-col overflow-hidden" x-data="cvApp()" :class="{ 'full-preview': fullPreview }">
+
+    <!-- ==================== MOBILE NOTICE ==================== -->
+    <div id="mobile-notice" class="md:hidden fixed top-0 inset-x-0 z-[60] bg-amber-500 text-amber-950 text-center py-2.5 px-4 text-xs font-semibold shadow-md">
+        <span>האתר מותאם כרגע למחשב. תצוגת מובייל בפיתוח</span>
+        <button onclick="this.parentElement.remove()" class="mr-3 text-amber-800 hover:text-amber-950 font-black text-sm">&times;</button>
+    </div>
+
+    <!-- ==================== COOKIE CONSENT ==================== -->
+    <div id="consent-banner" style="display:none" class="fixed bottom-0 inset-x-0 z-[60] bg-slate-900/95 backdrop-blur-lg text-white p-5 shadow-2xl border-t border-slate-700">
+        <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center gap-4">
+            <div class="flex-1 text-sm text-slate-300 leading-relaxed">
+                <p class="font-bold text-white mb-1">פרטיות ואנליטיקס</p>
+                <p>אנחנו משתמשים ב-cookies וכלי אנליטיקס (Google Analytics, Vercel) כדי לשפר את חוויית השימוש. אנחנו <strong class="text-white">לא אוספים</strong> תוכן קורות חיים, שמות, טלפונים או מידע אישי — רק נתוני שימוש אנונימיים.</p>
+                <a href="privacy.html" class="text-indigo-400 hover:text-indigo-300 underline text-xs mt-1 inline-block">מדיניות פרטיות מלאה</a>
+            </div>
+            <div class="flex gap-2 shrink-0">
+                <button onclick="acceptConsent()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition">מאשר</button>
+                <button onclick="declineConsent()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-5 rounded-xl text-sm transition">לא, תודה</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ==================== HEADER ==================== -->
     <header class="bg-slate-900 text-white px-6 py-4 flex flex-wrap items-center justify-between shadow-md no-print z-10">
