@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>יצירת קורות חיים | קורות חיים בקליק — מחולל חינמי בעברית</title>
+    <meta name="description" content="קורות חיים בקליק - מחולל קורות חיים חינמי בעברית, עם שמירה מקומית וייצוא PDF.">
+    <link rel="icon" href="assets/logo-mark.svg" type="image/svg+xml">
+    <link rel="manifest" href="site.webmanifest">
+    <meta name="theme-color" content="#0f172a">
+    <meta property="og:title" content="קורות חיים בקליק">
+    <meta property="og:description" content="מחולל קורות חיים חינמי בעברית, עם שמירה מקומית וייצוא PDF.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="assets/logo.svg">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF/image export dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Heebo:wght@300;400;500;700;800;900&family=Frank+Ruhl+Libre:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Assistant', 'sans-serif'],
+                        display: ['Heebo', 'sans-serif'],
+                        serif: ['Frank Ruhl Libre', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- App styles -->
+    <link rel="stylesheet" href="src/styles/app.css">
+    <link rel="stylesheet" href="src/styles/cv.css">
+
+    <!-- Alpine.js + App (loaded as modules for correct ordering) -->
+    <script type="module">
+        import Alpine from 'https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/module.esm.js';
+        window.Alpine = Alpine;
+        const { registerApp } = await import('./src/app.js');
+        registerApp();
+        Alpine.start();
+    </script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans h-screen antialiased flex flex-col overflow-hidden" x-data="cvApp()" :class="{ 'full-preview': fullPreview }">
+
+    <!-- ==================== HEADER ==================== -->
+    <header class="bg-slate-900 text-white px-6 py-4 flex flex-wrap items-center justify-between shadow-md no-print z-10">
+        <div class="flex items-center gap-3">
+            <a href="index.html" class="flex items-center gap-3 hover:opacity-80 transition">
+                <img src="assets/logo-mark.svg" alt="" class="w-10 h-10 rounded-xl shadow-sm">
+                <div>
+                    <h1 class="text-xl font-display font-extrabold tracking-tight">קורות חיים בקליק</h1>
+                    <p class="text-xs text-slate-400">מחולל קורות חיים חינמי בעברית — בזמן אמת</p>
+                </div>
+            </a>
+            <span class="hidden md:inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-300"></span>
+                שמירה מקומית
+            </span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 mt-4 sm:mt-0">
+            <button @click="doSaveDraft()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition">שמירת טיוטה</button>
+            <button @click="doLoadDraft()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition">טעינת טיוטה</button>
+            <button @click="fullPreview = !fullPreview; activeTab = 'preview'; $nextTick(() => updatePageInfo())"
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 px-4 rounded-lg shadow transition text-sm"
+                    x-text="fullPreview ? 'חזרה לעריכה' : 'תצוגה מלאה'"></button>
+            <button @click="doPrintCV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition flex items-center gap-2 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                הורדה כ-PDF
+            </button>
+            <button @click="doPrintTextPdf()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition" title="PDF עם טקסט ניתן לבחירה (ATS-friendly)">הדפסה</button>
+            <button @click="doExportImage('png')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition">PNG</button>
+            <button @click="doExportImage('jpeg')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition">JPEG</button>
+
+            <!-- JSON I/O -->
+            <button @click="doExportJson()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition" title="ייצוא JSON">JSON ⬇</button>
+            <button @click="doImportJson()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-3 rounded-lg text-sm border border-slate-700 transition" title="ייבוא JSON">JSON ⬆</button>
+
+            <!-- Demo menu -->
+            <div class="relative" @click.outside="demoMenuOpen = false">
+                <button @click="demoMenuOpen = !demoMenuOpen" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-2 px-4 rounded-lg text-sm border border-slate-700 transition flex items-center gap-1.5">
+                    דוגמאות
+                    <svg class="w-3.5 h-3.5 transition-transform" :class="demoMenuOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="demoMenuOpen" x-transition.opacity.duration.150ms class="absolute left-0 mt-2 w-60 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 z-30 text-right" style="display:none">
+                    <template x-for="(demo, key) in demos" :key="key">
+                        <button @click="loadDemo(key)" class="block w-full text-right px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition" x-text="demo.label || key"></button>
+                    </template>
+                </div>
+            </div>
+            <button @click="clearData()" class="bg-slate-800 hover:bg-red-900/40 text-red-400 font-medium py-2 px-4 rounded-lg text-sm border border-slate-700 hover:border-red-800/70 transition">איפוס</button>
+        </div>
+    </header>
+
+    <!-- Status bar -->
+    <div class="no-print bg-white border-b border-slate-200 px-4 py-2 text-center text-xs text-slate-500" x-show="saveStatus || exportStatus || longContentMessage" x-transition.opacity>
+        <span x-show="saveStatus" x-text="saveStatus"></span>
+        <span x-show="exportStatus" x-text="exportStatus"></span>
+        <span x-show="!saveStatus && !exportStatus && longContentMessage" class="text-amber-700 font-semibold" x-text="longContentMessage"></span>
+    </div>
+
+    <!-- ==================== MAIN ==================== -->
+    <main class="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+
+        <!-- Mobile tabs -->
+        <div x-show="!fullPreview" class="lg:hidden bg-white border-b border-slate-200 flex justify-around no-print">
+            <button @click="activeTab = 'edit'" :class="activeTab === 'edit' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'" class="w-1/2 py-3 text-center font-semibold border-b-2 text-sm transition">עריכת פרטים</button>
+            <button @click="activeTab = 'preview'" :class="activeTab === 'preview' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'" class="w-1/2 py-3 text-center font-semibold border-b-2 text-sm transition">תצוגה מקדימה</button>
+        </div>
+
+        <!-- ========== EDITOR PANEL ========== -->
+        <section x-show="!fullPreview && (activeTab === 'edit' || isDesktop)" class="w-full lg:w-[42%] lg:max-h-[calc(100vh-72px)] bg-slate-50 border-l border-slate-200 flex flex-col no-print overflow-hidden">
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
+
+                <!-- Intro -->
+                <div class="bg-white border-r-4 border-indigo-500 p-4 rounded-l-md mb-6 shadow-sm">
+                    <p class="text-xs text-slate-600 leading-relaxed">מלאו את הפרטים והם יתעדכנו מיד בתצוגה המקדימה. הטיוטה נשמרת בדפדפן המקומי בלבד.</p>
+                </div>
+
+
+                <!-- Validation issues -->
+                <div x-show="validationIssues.length > 0" class="mb-4 space-y-1">
+                    <template x-for="(issue, i) in validationIssues" :key="i">
+                        <div class="validation-pill" x-text="issue.message"></div>
+                    </template>
+                </div>
+
+                <!-- ===== DESIGN ===== -->
+                <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200">
+                    <h3 class="text-md font-bold text-slate-900 mb-4">עיצוב וצבעים</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">תבנית</label>
+                            <select x-model="settings.theme" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <option value="modern">מודרני (שני טורים)</option>
+                                <option value="classic">קלאסי (סריף אלגנטי)</option>
+                                <option value="minimal">מינימליסטי נקי</option>
+                                <option value="banner">כותרת רחבה (באנר)</option>
+                                <option value="executive">ניהולי (סרגל בהיר)</option>
+                                <option value="compact">קומפקטי (טור צפוף)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">צבע ראשי</label>
+                            <select x-model="settings.color" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <option value="indigo">כחול אינדיגו</option>
+                                <option value="teal">טורקיז</option>
+                                <option value="rose">בורדו</option>
+                                <option value="emerald">ירוק יער</option>
+                                <option value="amber">חום–זהב</option>
+                                <option value="slate">פחם</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== PERSONAL ===== -->
+                <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200">
+                    <h3 class="text-md font-bold text-slate-900 mb-4">פרטים אישיים</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="col-span-2 sm:col-span-1"><label class="block text-xs font-semibold text-slate-600 mb-1">שם מלא</label><input type="text" x-model="personal.name" placeholder="ישראל ישראלי" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition"></div>
+                        <div class="col-span-2 sm:col-span-1"><label class="block text-xs font-semibold text-slate-600 mb-1">כותרת מקצועית</label><input type="text" x-model="personal.title" placeholder="מפתח/ת Full Stack" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition"></div>
+                        <div class="col-span-2 sm:col-span-1"><label class="block text-xs font-semibold text-slate-600 mb-1">טלפון</label><input type="text" x-model="personal.phone" placeholder="050-1234567" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition"></div>
+                        <div class="col-span-2 sm:col-span-1"><label class="block text-xs font-semibold text-slate-600 mb-1">אימייל</label><input type="email" x-model="personal.email" placeholder="name@email.com" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition"></div>
+                        <div class="col-span-2 sm:col-span-1"><label class="block text-xs font-semibold text-slate-600 mb-1">עיר / מיקום</label><input type="text" x-model="personal.location" placeholder="תל אביב" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition"></div>
+                        <div class="col-span-2 sm:col-span-1"><label class="block text-xs font-semibold text-slate-600 mb-1">לינקדאין</label><input type="text" x-model="personal.linkedin" placeholder="linkedin.com/in/..." class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition"></div>
+                        <div class="col-span-2 sm:col-span-1"><label class="block text-xs font-semibold text-slate-600 mb-1">אתר / תיק עבודות</label><input type="text" x-model="personal.website" placeholder="my-portfolio.dev" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition"></div>
+                        <div class="col-span-2 sm:col-span-1"><label class="block text-xs font-semibold text-slate-600 mb-1">GitHub (אופציונלי)</label><input type="text" x-model="personal.github" placeholder="github.com/..." class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition"></div>
+                    </div>
+                </div>
+
+                <!-- ===== ABOUT ===== -->
+                <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200" x-show="isSectionVisible('about')">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-md font-bold text-slate-900">תקציר מקצועי</h3>
+                        <div class="relative">
+                            <button @click="toggleTip($event, 'about')" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                            <div x-show="showTips && tipTargetSection === 'about'" x-transition @click.outside="hideTip()" class="tip-popover">
+                                <div class="tip-popover-arrow"></div>
+                                <button @click="hideTip()" class="absolute top-1.5 left-1.5 text-amber-400 hover:text-amber-600 text-sm leading-none">&times;</button>
+                                <p class="text-xs text-amber-700" x-text="currentTip"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <textarea x-model="personal.about" rows="4" placeholder="פסקה קצרה וממוקדת על הניסיון, החוזקות והשאיפות שלך..." class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition resize-y"></textarea>
+                </div>
+
+                <!-- ===== SECTION MANAGER ===== -->
+                <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-md font-bold text-slate-900">סקציות</h3>
+                        <button @click="sectionManagerOpen = !sectionManagerOpen" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold bg-indigo-50 px-2.5 py-1 rounded transition" x-text="sectionManagerOpen ? 'סגור' : 'נהל סקציות'"></button>
+                    </div>
+
+                    <div x-show="sectionManagerOpen" x-transition class="mb-4 space-y-1.5">
+                        <p class="text-[11px] text-slate-400 mb-2">בחרו אילו סקציות להציג. השתמשו בחצים לשינוי סדר.</p>
+                        <div id="section-sort-list">
+                            <template x-for="sid in settings.sectionOrder" :key="sid">
+                                <div :data-section-id="sid" draggable="true"
+                                     class="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-100 bg-slate-50 text-sm"
+                                     x-show="sid !== 'about'">
+                                    <span class="text-slate-300 cursor-grab select-none">&#x2630;</span>
+                                    <label class="flex items-center gap-2 flex-1 cursor-pointer">
+                                        <input type="checkbox" :checked="isSectionVisible(sid)" @change="toggleSection(sid)"
+                                               class="section-toggle h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span class="text-xs font-medium text-slate-700" x-text="sectionDefs[sid]?.label || sid"></span>
+                                    </label>
+                                    <button @click="moveSectionUp(sid)" class="text-slate-400 hover:text-slate-600 text-[10px] leading-none px-1">&#9650;</button>
+                                    <button @click="moveSectionDown(sid)" class="text-slate-400 hover:text-slate-600 text-[10px] leading-none px-1">&#9660;</button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <button @click="runValidation()" class="w-full text-xs text-slate-500 hover:text-indigo-600 bg-slate-50 border border-slate-200 rounded-lg py-2 transition">
+                        בדוק תוכן ובעיות
+                    </button>
+                </div>
+
+                <!-- ===== DYNAMIC LIST SECTIONS ===== -->
+                <template x-for="sid in orderedVisibleSections" :key="sid">
+                    <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-md font-bold text-slate-900" x-text="sectionDefs[sid]?.label || sid"></h3>
+                            <div class="flex items-center gap-2">
+                                <div class="relative">
+                                    <button @click="toggleTip($event, sid)" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                                    <div x-show="showTips && tipTargetSection === sid" x-transition @click.outside="hideTip()" class="tip-popover">
+                                        <div class="tip-popover-arrow"></div>
+                                        <button @click="hideTip()" class="absolute top-1.5 left-1.5 text-amber-400 hover:text-amber-600 text-sm leading-none">&times;</button>
+                                        <p class="text-xs text-amber-700" x-text="currentTip"></p>
+                                    </div>
+                                </div>
+                                <button @click="addItem(sid)" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold bg-indigo-50 px-2.5 py-1 rounded transition" x-text="'+ ' + (sectionDefs[sid]?.addLabel || 'הוסף')"></button>
+                            </div>
+                        </div>
+                        <p x-show="!$data[sid] || $data[sid].length === 0" class="text-xs text-slate-400 text-center py-4" x-text="sectionDefs[sid]?.emptyLabel || 'אין פריטים עדיין.'"></p>
+                        <div class="space-y-4">
+                            <template x-for="(item, index) in $data[sid]" :key="index">
+                                <div class="p-4 bg-slate-50 rounded-lg border border-slate-100 relative">
+                                    <button @click="removeItem(sid, index)" class="absolute top-2 left-2 text-slate-400 hover:text-red-500 transition" title="מחק">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <template x-for="field in sectionDefs[sid]?.fields || []" :key="field.key">
+                                            <div :class="field.span === 2 ? 'col-span-2' : 'col-span-2 sm:col-span-1'">
+                                                <label class="block text-[10px] font-semibold text-slate-500" x-text="field.label"></label>
+                                                <template x-if="field.type === 'textarea'">
+                                                    <textarea x-model="item[field.key]" :rows="field.rows || 2" :placeholder="field.placeholder || ''" class="w-full text-xs bg-white border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none resize-y"></textarea>
+                                                </template>
+                                                <template x-if="field.type !== 'textarea'">
+                                                    <input type="text" x-model="item[field.key]" :placeholder="field.placeholder || ''" class="w-full text-xs bg-white border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none">
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- ===== SKILLS ===== -->
+                <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200" x-show="isSectionVisible('skills')">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-md font-bold text-slate-900">מיומנויות וכלים</h3>
+                        <div class="relative">
+                            <button @click="toggleTip($event, 'skills')" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                            <div x-show="showTips && tipTargetSection === 'skills'" x-transition @click.outside="hideTip()" class="tip-popover">
+                                <div class="tip-popover-arrow"></div>
+                                <button @click="hideTip()" class="absolute top-1.5 left-1.5 text-amber-400 hover:text-amber-600 text-sm leading-none">&times;</button>
+                                <p class="text-xs text-amber-700" x-text="currentTip"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mb-3">מופרדות בפסיקים (,)</p>
+                    <input type="text" x-model="skillsInput" @input="updateSkills()" placeholder="React, Node.js, ניהול זמן, עבודת צוות" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition">
+                </div>
+
+                <!-- ===== LANGUAGES ===== -->
+                <div class="bg-white rounded-xl p-5 mb-6 shadow-sm border border-slate-200" x-show="isSectionVisible('languages')">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-md font-bold text-slate-900">שפות</h3>
+                        <div class="flex items-center gap-2">
+                            <div class="relative">
+                                <button @click="toggleTip($event, 'languages')" class="text-amber-500 hover:text-amber-700 text-xs font-medium">טיפ</button>
+                                <div x-show="showTips && tipTargetSection === 'languages'" x-transition @click.outside="hideTip()" class="tip-popover">
+                                    <div class="tip-popover-arrow"></div>
+                                    <button @click="hideTip()" class="absolute top-1.5 left-1.5 text-amber-400 hover:text-amber-600 text-sm leading-none">&times;</button>
+                                    <p class="text-xs text-amber-700" x-text="currentTip"></p>
+                                </div>
+                            </div>
+                            <button @click="addLanguage()" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold bg-indigo-50 px-2.5 py-1 rounded transition">+ הוסף שפה</button>
+                        </div>
+                    </div>
+                    <p x-show="languages.length === 0" class="text-xs text-slate-400 text-center py-4">אין שפות עדיין — לחצו על "הוסף שפה".</p>
+                    <div class="space-y-3">
+                        <template x-for="(lang, index) in languages" :key="index">
+                            <div class="flex items-center gap-2">
+                                <input type="text" x-model="lang.name" placeholder="שפה (עברית)" class="w-1/2 text-xs bg-slate-50 border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none">
+                                <input type="text" x-model="lang.level" placeholder="רמה (שפת אם)" class="w-1/2 text-xs bg-slate-50 border border-slate-200 rounded p-1.5 focus:ring-1 focus:ring-indigo-500 outline-none">
+                                <button @click="removeLanguage(index)" class="text-slate-400 hover:text-red-500 p-1.5 transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ========== PREVIEW PANEL ========== -->
+        <section x-show="fullPreview || activeTab === 'preview' || isDesktop"
+                 class="w-full bg-slate-700 flex-1 overflow-auto p-4 md:p-8 flex items-start justify-center"
+                 :class="fullPreview ? 'lg:w-full' : 'lg:w-[58%]'">
+
+            <div class="no-print fixed bottom-4 left-4 z-20 rounded-full bg-white/95 px-4 py-2 text-xs font-semibold shadow-lg border border-slate-200"
+                 :class="pageCount > 1 ? 'text-amber-700' : 'text-slate-600'">
+                <span x-text="pageCount > 1 ? `${pageCount} עמודי A4` : 'עמוד A4 אחד'"></span>
+            </div>
+
+            <div class="preview-scale-container w-full flex justify-center">
+                <div class="cv-page bg-white text-slate-800 relative" dir="rtl"
+                     :class="{ 'font-sans': settings.theme !== 'classic', 'font-serif': settings.theme === 'classic' }">
+                    <div class="cv-page-shell" x-html="renderedCV"></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+</body>
+</html>
