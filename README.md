@@ -1,97 +1,107 @@
-# קורות חיים בקליק
+<div align="center">
 
-![לוגו קורות חיים בקליק](assets/logo.svg)
+# ClicResume | קורות חיים בקליק
 
-מחולל קורות חיים חינמי בעברית, שנבנה כדי לעזור לאנשים לכתוב, לעצב ולייצא קורות חיים בצורה פשוטה ומכבדת.
+**Free, AI-powered resume builder for Hebrew speakers**
 
-הפרויקט מיועד להישאר חופשי לשימוש. אין הרשמה, אין שרת, והטיוטה נשמרת בדפדפן המקומי בלבד. אנליטיקס (GA4) נטען רק אחרי הסכמה מפורשת של המשתמש ואינו אוסף מידע אישי.
+[Website](https://clicresume.co.il) · [Report Bug](../../issues/new?template=bug_report.yml) · [Request Feature](../../issues/new?template=feature_request.yml) · [Roadmap](docs/ROADMAP.md)
 
-## מה יש כרגע
+[![License: FSL-1.1-MIT](https://img.shields.io/badge/License-FSL--1.1--MIT-blue.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-- עריכת פרטים אישיים, תקציר, ניסיון, השכלה, שירות צבאי, התנדבות, פרויקטים, הסמכות, מיומנויות ושפות
-- סקציות מותאמות: בחירה אילו סקציות להציג ובאיזה סדר (drag & drop)
-- תצוגה מקדימה בזמן אמת
-- 6 תבניות עיצוב ו-6 ערכות צבעים
-- שמירת טיוטה מקומית בדפדפן עם autosave
-- ייצוא ל-PDF, PNG, JPEG ו-JSON
-- אפשרות הדפסה ל-PDF עם טקסט ניתן לבחירה (ATS-friendly)
-- ייבוא/ייצוא JSON לגיבוי ושיתוף
-- טיפים לכתיבה ובדיקות תוכן
-- חותמת קרדיט עדינה (תמיד מוצגת)
-- ארכיטקטורה מודולרית: ES modules, קוד מפוצל לקבצים
-- תשתית i18n מוכנה לאנגלית
-- דוגמאות מוכנות לפי מקצועות (מדע נתונים, שיווק, סיעוד, ראיית חשבון)
-- דף נחיתה מודרני עם אנימציות
-- Google Analytics 4 עם consent mode v2 (GDPR-compliant)
-- באנר הסכמה ל-cookies עם אפשרות דחייה
-- דף מדיניות פרטיות
-- באנר "מומלץ מחשב" לגולשים ממובייל
+</div>
 
-## איך מריצים
+---
 
-נדרש שרת HTTP מקומי (ES modules לא עובדים מ-`file://`):
+## About
+
+ClicResume helps people create professional, well-structured resumes quickly and confidently. It is designed for Hebrew speakers and supports full RTL layouts, with English support planned.
+
+The project is **free to use** and always will be. No sign-up required. Your resume data stays in your browser — nothing is sent to a server.
+
+### Features
+
+- **Live editor and preview** — see changes in real time
+- **6 professional templates** with 6 color schemes
+- **Full Hebrew RTL support** — first-class, not an afterthought
+- **Privacy-first** — resume content never leaves your browser
+- **Multiple export formats** — PDF (ATS-friendly), PNG, JPEG, JSON
+- **Auto-save drafts** — local browser storage
+- **Writing tips** — guidance for each section
+- **Profession examples** — data science, marketing, nursing, accounting
+- **Drag & drop sections** — customize order and visibility
+- **Import/export JSON** — backup and share resume data
+
+## Getting Started
+
+ClicResume runs as a static web app. No build step required.
 
 ```bash
-# אפשרות 1: npx
+# Option 1: npx
 npx serve .
 
-# אפשרות 2: Python
+# Option 2: Python
 python3 -m http.server 8000
 
-# אפשרות 3: VS Code
-# התקינו את התוסף Live Server ולחצו Go Live
+# Option 3: VS Code Live Server extension
 ```
 
-ב-GitHub Pages האפליקציה עובדת ישירות כי היא מוגשת דרך HTTPS.
+Then open `http://localhost:8000` in your browser.
 
-## פרסום ב-GitHub Pages
-
-1. מעלים את הפרויקט לריפוזיטורי ציבורי.
-2. נכנסים ל-Settings → Pages.
-3. בוחרים Deploy from a branch.
-4. בוחרים את `main` ואת תיקיית `/root`.
-5. אחרי הפרסום, הקובץ `index.html` יהיה עמוד הבית.
-
-## עקרונות
-
-- תמיד חינם לשימוש.
-- פרטיות כברירת מחדל: לא שולחים קורות חיים לשרת.
-- מתאים קודם כל לעברית ו-RTL.
-- קוד מודולרי ונגיש לתורמים.
-- תמיכה עתידית באנגלית בלי לשבור את החוויה בעברית.
-
-## מבנה הפרויקט
+## Project Structure
 
 ```
-index.html          # דף נחיתה (עמוד ראשי)
-builder.html        # בונה קורות החיים
-privacy.html        # מדיניות פרטיות
 src/
-  app.js            # Alpine component ראשי
-  analytics.js      # אנליטיקס (consent, GA4, Vercel)
-  cv-data.js        # מודל נתונים
-  sections.js       # הגדרות סקציות
-  templates/        # 6 תבניות CV
-  export/           # ייצוא PDF / תמונה / JSON
-  styles/           # CSS
-demos/              # דוגמאות JSON לפי מקצוע
-assets/             # לוגו ומיתוג
+  app.js              # Main Alpine.js component
+  cv-data.js          # Data model
+  sections.js         # Section definitions
+  templates/          # 6 resume templates
+  export/             # PDF / image / JSON export
+  styles/             # CSS
+  i18n.js             # Internationalization framework
+  analytics.js        # Privacy-conscious analytics
+demos/                # Example data by profession
+assets/               # Logo and branding
 ```
 
-ראו `ARCHITECTURE.md` לפירוט מלא.
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full technical details.
 
-## תמיכה בפרויקט
+## Contributing
 
-המטרה אינה להרוויח מהכלי. בעתיד אפשר להוסיף קישור תמיכה אופציונלי למי שרוצה לעזור בתחזוקה, אבל השימוש עצמו יישאר חינמי.
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## רישיון
+Good ways to contribute:
 
-MIT. ראו `LICENSE`.
+- Add new resume templates
+- Add translations (English support coming soon)
+- Add example data for more professions
+- Fix bugs and improve accessibility
+- Improve documentation
+- Test PDF export across browsers
 
-## פרטיות
+## License
 
-ראו `PRIVACY.md`.
+This project is licensed under the **Functional Source License, Version 1.1, MIT Future License (FSL-1.1-MIT)**.
 
-## Analytics
+You can view, use, modify, and contribute to the code. Commercial competing use is restricted. Each version converts to the MIT license after two years.
 
-ראו `ANALYTICS.md`.
+See [LICENSE](LICENSE) for the full text, and [TRADEMARK.md](TRADEMARK.md) for brand usage guidelines.
+
+> **Note:** This is a source-available license, not an OSI-approved open-source license. See the [FSL FAQ](https://fsl.software/) for details.
+
+## Privacy
+
+Resume content never leaves the user's browser. Analytics (when consented to) are anonymous and event-based. See [PRIVACY.md](docs/PRIVACY.md).
+
+## Trademark
+
+"ClicResume" and "קורות חיים בקליק" are trademarks of Shimon Amsellem. See [TRADEMARK.md](TRADEMARK.md) for usage guidelines.
+
+## Support the Project
+
+ClicResume is and will remain free. If you find it useful and want to support development:
+
+- Star this repository
+- Share it with someone who needs a resume
+- [Report issues](../../issues) and suggest improvements
+- Contribute code or translations

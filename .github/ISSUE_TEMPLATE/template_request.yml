@@ -1,0 +1,61 @@
+name: Resume Template Request
+description: Suggest a new resume template design
+title: "[Template]: "
+labels: ["template", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We love adding new resume templates! Describe the style you have in mind.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Template Description
+      description: What kind of template are you envisioning? Describe the layout, style, and target audience.
+      placeholder: "A two-column template with a sidebar for skills, aimed at tech professionals..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: style
+    attributes:
+      label: Visual Style
+      options:
+        - Minimal / Clean
+        - Modern / Bold
+        - Classic / Traditional
+        - Creative / Colorful
+        - Executive / Formal
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: profession
+    attributes:
+      label: Target Profession (if specific)
+      options:
+        - General / All professions
+        - Tech / Software
+        - Design / Creative
+        - Business / Management
+        - Academic / Research
+        - Medical / Healthcare
+        - Legal
+        - Other
+
+  - type: textarea
+    id: references
+    attributes:
+      label: Visual References
+      description: Links to similar templates or screenshots of the style you have in mind.
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Would you like to help build this template?
+      options:
+        - label: "Yes, I'd like to implement this myself"
+        - label: "I can help with design/CSS but need help with the JS integration"
+        - label: "I'm just suggesting — someone else would need to build it"
