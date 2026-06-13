@@ -1,5 +1,27 @@
 # יומן שינויים — ClicResume
 
+## יוני 2026 — SEO, GEO, מייל תמיכה
+
+### SEO
+- **Structured Data** — JSON-LD מסוג `WebApplication` ו-`FAQPage` ב-`index.html`
+- **Meta tags משופרים** — keywords, author, robots בכל הדפים
+- **Twitter Cards** — summary_large_image בדף הראשי, summary בבונה
+- **Open Graph** — locale, site_name, URL מלא לתמונות
+- **`sitemap.xml`** — כל 4 הדפים עם priority ו-changefreq
+- **`robots.txt`** — Allow all + הפניה ל-sitemap
+- **Canonical URLs** — בכל הדפים
+
+### GEO — מיקוד ישראל
+- **`content-language: he-IL`** בכל הדפים
+- **`geo.region: IL`** ו-`geo.placename: Israel`
+- **`hreflang`** — he + x-default
+- **`og:locale: he_IL`** בכל הדפים
+
+### מייל תמיכה
+- **`support@clicresume.com`** — נוסף לפוטר דף הבית (✉ צור קשר), דף פרטיות, הצהרת נגישות, ו-JSON-LD contactPoint
+
+---
+
 ## יוני 2026 — נגישות
 
 ### נגישות (תקן 5568 / WCAG 2.1 AA)
