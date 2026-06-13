@@ -188,6 +188,8 @@ export function renderWatermark() {
     return `<div class="brand-watermark">
         <img src="assets/logo-mark.svg" alt="" class="brand-watermark__mark">
         <span>נוצר עם קורות חיים בקליק</span>
+        <span style="margin:0 3px;opacity:.5">|</span>
+        <span style="direction:ltr">clicresume.com</span>
     </div>`;
 }
 
